@@ -12,6 +12,7 @@ namespace Unity.ClusterDisplay.Graphics.Editor
         SerializedProperty m_BezelProp;
         SerializedProperty m_IsDebugProp;
         SerializedProperty m_TileIndexProp;
+        SerializedProperty m_PositionNonFullscreenWindowProp;
         SerializedProperty m_LayoutProp;
         SerializedProperty m_KeywordProp;
         SerializedProperty m_DebugViewportProp;
@@ -29,6 +30,7 @@ namespace Unity.ClusterDisplay.Graphics.Editor
             m_BezelProp = serializedObject.FindProperty("m_Settings.Bezel");
             m_IsDebugProp = serializedObject.FindProperty("m_IsDebug");
             m_TileIndexProp = serializedObject.FindProperty("m_NodeIndexOverride");
+            m_PositionNonFullscreenWindowProp = serializedObject.FindProperty("m_PositionNonFullscreenWindow");
             m_LayoutProp = serializedObject.FindProperty("m_DebugSettings.LayoutMode");
             m_KeywordProp = serializedObject.FindProperty("m_DebugSettings.EnableKeyword");
             m_PresentClearColorProp = serializedObject.FindProperty("m_DebugSettings.PresentClearColor");
@@ -50,6 +52,7 @@ namespace Unity.ClusterDisplay.Graphics.Editor
                 EditorGUILayout.PropertyField(m_ScreenSizeProp, Labels.GetGUIContent(Labels.Field.PhysicalScreenSize));
                 EditorGUILayout.PropertyField(m_BezelProp, Labels.GetGUIContent(Labels.Field.Bezel));
                 EditorGUILayout.PropertyField(m_TileIndexProp);
+                EditorGUILayout.PropertyField(m_PositionNonFullscreenWindowProp, Labels.GetGUIContent(Labels.Field.PositionNonFullscreenWindows));
                 EditorGUILayout.PropertyField(m_IsDebugProp, Labels.GetGUIContent(Labels.Field.Debug));
                 if (m_IsDebugProp.boolValue)
                 {

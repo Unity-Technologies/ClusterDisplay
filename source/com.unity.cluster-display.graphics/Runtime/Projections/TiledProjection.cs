@@ -1,5 +1,7 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
+using System.Runtime.InteropServices;
 using Unity.ClusterDisplay.Utils;
 using UnityEditor;
 using UnityEngine;
@@ -90,6 +92,9 @@ namespace Unity.ClusterDisplay.Graphics
         [SerializeField]
         TiledProjectionDebugSettings m_DebugSettings = new() { ViewportSubsection = new Rect(0, 0, 0.5f, 0.5f) };
 
+        [SerializeField]
+        bool m_PositionNonFullscreenWindow;
+
         readonly SlicedFrustumGizmo m_Gizmo = new SlicedFrustumGizmo();
         readonly List<BlitCommand> m_BlitCommands = new List<BlitCommand>();
         RenderTexture[] m_TileRenderTargets;
@@ -145,6 +150,7 @@ namespace Unity.ClusterDisplay.Graphics
             var displaySize = new Vector2Int(Screen.width, Screen.height);
             var overscannedSize = displaySize + clusterSettings.OverScanInPixels * 2 * Vector2Int.one;
             var currentTileIndex = GetEffectiveNodeIndex();
+            MoveToRenderNodePosition(currentTileIndex);
             var numTiles = Settings.GridSize.x * Settings.GridSize.y;
             m_DisplayMatrixSize = new Vector2Int(Settings.GridSize.x * displaySize.x, Settings.GridSize.y * displaySize.y);
 
@@ -334,6 +340,58 @@ namespace Unity.ClusterDisplay.Graphics
             }
 
             commands.Add(new BlitCommand(target, tileProjectionContext.BlitParams.ScaleBias, GraphicsUtil.k_IdentityScaleBias, customBlitMaterial, GetCustomBlitMaterialPropertyBlocks(tileProjectionContext.CurrentTileIndex)));
+        }
+
+        bool ShouldPositionWindow()
+        {
+#if UNITY_EDITOR
+            return false;
+#else
+            return m_PositionNonFullscreenWindow && !Screen.fullScreen;
+#endif
+        }
+
+        [DllImport("user32.dll")]
+        static extern int SetWindowLong(IntPtr hWnd, int nIndex, uint dwNewLong);
+        [DllImport("user32.dll")]
+        static extern bool MoveWindow(IntPtr hWnd, int x, int y, int nWidth, int nHeight, bool bRepaint);
+
+        const int GWL_STYLE = -16;
+        const uint WS_VISIBLE = 0x10000000;
+        const uint WS_POPUP = 0x80000000;
+
+        int m_WindowPositionForRenderNodeIndex = -1;
+        bool m_IsFrameless;
+
+        void MoveToRenderNodePosition(int renderNodeIndex)
+        {
+            if (!ShouldPositionWindow() || renderNodeIndex == m_WindowPositionForRenderNodeIndex)
+            {
+                return;
+            }
+            if (!ServiceLocator.TryGet(out IClusterSyncState clusterSync) || clusterSync.NodeRole == NodeRole.Backup)
+            {
+                return;
+            }
+
+            var processWindow = Process.GetCurrentProcess().MainWindowHandle;
+            if (!m_IsFrameless)
+            {
+                SetWindowLong(processWindow, GWL_STYLE, WS_POPUP | WS_VISIBLE);
+                m_IsFrameless = true;
+            }
+
+            var numTiles = Settings.GridSize.x * Settings.GridSize.y;
+            int clampedRenderNodeIndex = Math.Min(renderNodeIndex, numTiles - 1);
+            var tileX = clampedRenderNodeIndex % Settings.GridSize.x;
+            var tileY = clampedRenderNodeIndex / Settings.GridSize.x;
+            float widthUnitInPixels = (Settings.PhysicalScreenSize.x - Settings.Bezel.x * 2) / Screen.width;
+            float heightUnitInPixels = (Settings.PhysicalScreenSize.y - Settings.Bezel.y * 2) / Screen.height;
+            int windowX = (int)Math.Round((Settings.PhysicalScreenSize.x * tileX + Settings.Bezel.x) / widthUnitInPixels);
+            int windowY = (int)Math.Round((Settings.PhysicalScreenSize.y * tileY + Settings.Bezel.y) / heightUnitInPixels);
+
+            MoveWindow(processWindow, windowX, windowY, Screen.width, Screen.height, false);
+            m_WindowPositionForRenderNodeIndex = renderNodeIndex;
         }
     }
 }
