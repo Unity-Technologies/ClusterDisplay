@@ -63,7 +63,7 @@ namespace Unity.ClusterDisplay.MissionControl
             /// <summary>
             /// Does the contain contain anything.
             /// </summary>
-            public bool Any => GlobalParameters.Any() && LaunchComplexParameters.Any() && LaunchPadParameters.Any();
+            public bool Any => GlobalParameters.Any() || LaunchComplexParameters.Any() || LaunchPadParameters.Any();
         }
     }
 }

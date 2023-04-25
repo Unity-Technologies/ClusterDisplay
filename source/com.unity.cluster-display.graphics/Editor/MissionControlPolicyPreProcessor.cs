@@ -89,6 +89,14 @@ namespace Unity.ClusterDisplay.Graphics
                 "Physical height of a display (not to be confused with screen size in pixels).");
             AddVector2IntParameter(ret.GlobalParameters, "Bezel", TiledProjection.BezelParameterId,
                 "Physical width of display bezels.", "Physical height of display bezels.");
+            ret.GlobalParameters.Add(new()
+            {
+                Name = Labels.GetName(Labels.Field.PositionNonFullscreenWindows),
+                Id = TiledProjection.PositionWindowsParameterId,
+                Description = Labels.GetTooltip(Labels.Field.PositionNonFullscreenWindows),
+                Type = LaunchParameterType.Boolean,
+                DefaultValue = false
+            });
             return ret;
         }
 
