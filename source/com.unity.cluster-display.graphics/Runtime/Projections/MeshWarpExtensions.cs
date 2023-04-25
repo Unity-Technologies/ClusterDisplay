@@ -236,9 +236,6 @@ namespace Unity.ClusterDisplay.Graphics
             // seeing which color are present on the mesh.
             using var cameraScope = CameraScopeFactory.Create(activeCamera, RenderFeature.ClearHistory);
             cameraScope.RenderToCubemap(renderTarget, cubeMapCenter);
-
-            // Enable code below to dump the cubemap to disk and make debugging easier
-            // GraphicsUtil.SaveCubemapToEquirectFile(renderTarget, "c:\\temp\\cubemap.png");
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]

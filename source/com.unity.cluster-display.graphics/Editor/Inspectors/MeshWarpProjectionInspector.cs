@@ -39,7 +39,7 @@ namespace Unity.ClusterDisplay.Graphics.Editor
             public static readonly GUIContent BackgroundColor = EditorGUIUtility.TrTextContent("Background Color");
             public static readonly GUIContent StaticCubemap = EditorGUIUtility.TrTextContent("Cubemap");
             public static readonly GUIContent StaticCubemapSnapshot = EditorGUIUtility.TrTextContent(
-                "Snapshot Realtime Cubemap",
+                "Generate Static Cubemap",
                 "Take a snapshot of the realtime cubemap, save it as an asset and use it as the static cubemap");
             public static readonly GUIContent OuterViewPosition = EditorGUIUtility.TrTextContent("Outer View Origin",
                 "The position, specified locally, from which to render the outer frustum cubemap.");
@@ -233,26 +233,9 @@ namespace Unity.ClusterDisplay.Graphics.Editor
 
             // Create the cubemap asset
             var cubemapAsset = GraphicsUtil.RenderTextureCubemapToCubemap(cubemap);
-
-            // Save it
-            for (int snapshotIndex = 0; snapshotIndex < int.MaxValue; ++snapshotIndex)
-            {
-                string filename = $"snapshot-{snapshotIndex}.asset";
-                string snapshotFolder = "MeshWarpStaticCubemap";
-                if (File.Exists(Path.Combine(Application.dataPath, snapshotFolder, filename)))
-                {
-                    continue;
-                }
-
-                if (!Directory.Exists(Path.Combine(Application.dataPath, snapshotFolder)))
-                {
-                    AssetDatabase.CreateFolder("Assets", snapshotFolder);
-                }
-
-                AssetDatabase.CreateAsset(cubemapAsset, $"Assets/{snapshotFolder}/{filename}");
-                AssetDatabase.SaveAssets();
-                break;
-            }
+            var assetPath = AssetDatabase.GenerateUniqueAssetPath("Assets/MeshWarpStaticCubemap/snapshot.asset");
+            AssetDatabase.CreateAsset(cubemapAsset, assetPath);
+            AssetDatabase.SaveAssets();
 
             // Set the projection properties
             Undo.RecordObject(m_Projection, "Snapshot Realtime Cubemap");

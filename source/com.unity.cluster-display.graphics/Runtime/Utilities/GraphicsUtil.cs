@@ -262,22 +262,6 @@ namespace Unity.ClusterDisplay.Graphics
         // Convention, consistent with blit scale-bias for example.
         internal static Vector4 AsScaleBias(Rect rect) => new(rect.width, rect.height, rect.x, rect.y);
 
-        public static void SaveCubemapToEquirectFile(RenderTexture rt, string path)
-        {
-            var equirect = new RenderTexture(rt.width * 4, rt.height * 3, rt.depth);
-            rt.ConvertToEquirect(equirect);
-
-            RenderTexture.active = equirect;
-            Texture2D tex = new Texture2D(equirect.width, equirect.height, TextureFormat.RGB24, false);
-            tex.ReadPixels(new Rect(0, 0, equirect.width, equirect.height), 0, 0);
-            RenderTexture.active = null;
-
-            byte[] bytes = tex.EncodeToPNG();
-
-            File.WriteAllBytes(path, bytes);
-            Debug.Log("Saved to " + path);
-        }
-
         public static Cubemap RenderTextureCubemapToCubemap(RenderTexture cubemapRt)
         {
             Debug.Assert(cubemapRt.width == cubemapRt.height);
@@ -298,47 +282,6 @@ namespace Unity.ClusterDisplay.Graphics
             RenderTexture.active = null;
 
             return cubemap;
-        }
-
-        public static void SaveCubemapToFile(RenderTexture cubemap, string path)
-        {
-            Debug.Assert(cubemap.width == cubemap.height);
-            var size = cubemap.width;
-
-            // Extract the 6 sides of the cubemap to a Texture2D
-            Texture2D tex = new Texture2D(size * 6, size, RenderTextureFormatToTextureFormat(cubemap.format), false);
-
-            for (int i = 0; i < 6; i++)
-            {
-                UnityEngine.Graphics.SetRenderTarget(cubemap, 0, (CubemapFace)i);
-                tex.ReadPixels(new Rect(0, 0, cubemap.width, cubemap.height), i * size, 0, false);
-            }
-
-            RenderTexture.active = null;
-
-            // Flip it up side down
-            var pixels = tex.GetPixels();
-            for (int y = 0; y < tex.height / 2; y++)
-            {
-                int fromOffset = y * tex.width;
-                int toOffset = (tex.height - y - 1) * tex.width;
-                for (int x = 0; x < tex.width; ++x)
-                {
-                    (pixels[fromOffset + x], pixels[toOffset + x]) = (pixels[toOffset + x], pixels[fromOffset + x]);
-                }
-            }
-            tex.SetPixels(pixels);
-
-            // Save it
-            byte[] bytes = Path.GetExtension(path).ToLower() switch
-            {
-                ".png" => tex.EncodeToPNG(),
-                ".jpg" or ".jpeg" => tex.EncodeToJPG(),
-                ".exr" => tex.EncodeToEXR(),
-                ".tga" => tex.EncodeToTGA(),
-                _ => throw new ArgumentException("Unsupported extension")
-            };
-            File.WriteAllBytes(System.IO.Path.Combine(Application.dataPath, path), bytes);
         }
 
         static TextureFormat RenderTextureFormatToTextureFormat(RenderTextureFormat renderTextureFormat)
