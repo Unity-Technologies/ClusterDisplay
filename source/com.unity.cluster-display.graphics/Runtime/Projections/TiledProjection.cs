@@ -351,6 +351,7 @@ namespace Unity.ClusterDisplay.Graphics
 #endif
         }
 
+#if UNITY_STANDALONE_WIN
         [DllImport("user32.dll")]
         static extern int SetWindowLong(IntPtr hWnd, int nIndex, uint dwNewLong);
         [DllImport("user32.dll")]
@@ -362,9 +363,11 @@ namespace Unity.ClusterDisplay.Graphics
 
         int m_WindowPositionForRenderNodeIndex = -1;
         bool m_IsFrameless;
+#endif
 
         void MoveToRenderNodePosition(int renderNodeIndex)
         {
+#if UNITY_STANDALONE_WIN
             if (!ShouldPositionWindow() || renderNodeIndex == m_WindowPositionForRenderNodeIndex)
             {
                 return;
@@ -392,6 +395,7 @@ namespace Unity.ClusterDisplay.Graphics
 
             MoveWindow(processWindow, windowX, windowY, Screen.width, Screen.height, false);
             m_WindowPositionForRenderNodeIndex = renderNodeIndex;
+#endif
         }
     }
 }
