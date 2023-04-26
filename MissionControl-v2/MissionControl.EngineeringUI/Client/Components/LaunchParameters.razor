@@ -2,8 +2,7 @@
 
 <RadzenDataGrid Data=@Entries @ref="m_EntriesGrid"
                 AllowMultiColumnSorting="true" ShowMultiColumnSortingIndex="true" AllowSorting="true"
-                ExpandMode="DataGridExpandMode.Single" RowRender=@RowRender
-                @bind-Value=@m_SelectedEntries>
+                ExpandMode="DataGridExpandMode.Single" RowRender=@RowRender>
     <Template Context="entry">
         @{
             var nestedEntry = (NestedEntry)entry;

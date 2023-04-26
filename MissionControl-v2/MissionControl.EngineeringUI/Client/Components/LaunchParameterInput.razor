@@ -9,7 +9,11 @@ else
     Constraint? constraint = Entry.Definition?.Constraint;
     RangeConstraint? rangeConstraint = constraint as RangeConstraint;
 
-    <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" Gap="24px" JustifyContent="JustifyContent.SpaceBetween">
+    <RadzenStack Orientation="Orientation.Horizontal"
+                 AlignItems="AlignItems.Center"
+                 Gap="24px"
+                 JustifyContent="JustifyContent.SpaceBetween"
+                 class="launch-parameter-input">
         @switch (Entry.Definition?.Type)
         {
             case LaunchCatalog.LaunchParameterType.Boolean:
@@ -21,13 +25,13 @@ else
                                Max="@(rangeConstraint?.MaxInt32Inclusive)"/>
                 @if (rangeConstraint is { Max: not null, Min: not null })
                 {
-                    <RadzenSlider @bind-Value=@IntValue
+                    <RadzenSlider @bind-Value=@IntValue Style="width: 100%; min-width: 100px"
                                   Min="@rangeConstraint.MinInt32Inclusive"
                                   Max="@rangeConstraint.MaxInt32Inclusive"/>
                 }
                 break;
             case LaunchCatalog.LaunchParameterType.Float:
-                <RadzenNumeric @bind-Value=@FloatValue
+                <RadzenNumeric @bind-Value=@FloatValue Style="width: 100%; min-width: 100px"
                                Min="@(rangeConstraint?.MinDecimalInclusive)"
                                Max="@(rangeConstraint?.MaxDecimalInclusive)"/>
                 @if (rangeConstraint is { Max: not null, Min: not null })
@@ -48,6 +52,8 @@ else
                 </RadzenStack>
                 break;
             default:
+                // Unknown definition: Uneditable field
+                <RadzenLabel Text="@(Entry.ParameterValue?.Value.ToString())" />
                 break;
         }
     </RadzenStack>
@@ -109,7 +115,7 @@ else
         {
             return constraint switch
             {
-                RegularExpressionConstraint => "Invalid format",
+                RegularExpressionConstraint regexConstraint => regexConstraint.ErrorMessage,
                 RangeConstraint range when range is { Min: not null, Max: null } => $"Value must be greater than {range.Min}",
                 RangeConstraint range when range is { Min: null, Max: not null } => $"Value must be less than {range.Max}",
                 RangeConstraint range => $"Value must be between {range.Min} and {range.Max}",

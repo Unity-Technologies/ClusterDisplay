@@ -440,6 +440,12 @@ input {
 .rz-cell-data > .rz-textbox {
     height: calc(100% - var(--rz-input-padding));
 }
+
+.launch-parameter-input .rz-textbox {
+    /* Hack: override the normal text field size for launch parameters */
+    height: 24px;
+}
+
 /* ************************ Responsive Design ************************ */
 @media screen and (max-width: 768px) {
     .rz-body {

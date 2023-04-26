@@ -54,7 +54,7 @@ namespace Unity.ClusterDisplay.MissionControl.EngineeringUI.Components
 
             public string? ValidationError { get; set; } = null;
 
-            public override string Name => Definition?.Name ?? "(unknown)";
+            public override string Name => Definition?.Name ?? $"(Unused: {ParameterValue?.Id ?? ""})";
             public override object Value => ParameterValue?.Value ?? (Definition?.DefaultValue ?? "unknown");
             public override bool IsEmpty => Definition == null && ParameterValue == null;
             public override void Clear()
@@ -94,7 +94,6 @@ namespace Unity.ClusterDisplay.MissionControl.EngineeringUI.Components
         List<Entry> Entries { get; } = new();
 
         RadzenDataGrid<Entry>? m_EntriesGrid = default;
-        IList<Entry>? m_SelectedEntries;
 
         protected override void OnParametersSet()
         {
