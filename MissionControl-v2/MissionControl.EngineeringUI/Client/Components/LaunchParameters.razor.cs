@@ -1,5 +1,4 @@
 using Microsoft.AspNetCore.Components;
-using Microsoft.Extensions.Logging;
 using Radzen;
 using Radzen.Blazor;
 using Unity.ClusterDisplay.MissionControl.EngineeringUI.Dialogs;
@@ -93,7 +92,7 @@ namespace Unity.ClusterDisplay.MissionControl.EngineeringUI.Components
 
         List<Entry> Entries { get; } = new();
 
-        RadzenDataGrid<Entry>? m_EntriesGrid = default;
+        RadzenDataGrid<Entry>? m_EntriesGrid;
 
         protected override void OnParametersSet()
         {
@@ -285,6 +284,33 @@ namespace Unity.ClusterDisplay.MissionControl.EngineeringUI.Components
                     nestedEntry.PreviousValues.Clear();
                     nestedEntry.PreviousValues.AddRange(nestedEntry.Values);
                 }
+            }
+        }
+
+        // Is the field currently showing the default value for the parameter?
+        static bool ShowingDefaultValue(Entry entry) =>
+            entry switch
+            {
+                ParameterEntry parameterEntry => parameterEntry.ParameterValue is null && parameterEntry.ValidationError is null,
+                NestedEntry nestedEntry => !nestedEntry.Values.Any(),
+                _ => throw new ArgumentOutOfRangeException(nameof(entry))
+            };
+
+        async Task ResetToDefault(Entry entry)
+        {
+            switch (entry)
+            {
+                case ParameterEntry parameterEntry:
+                    parameterEntry.ParameterValue = null;
+                    parameterEntry.ValidationError = null;
+                    OnParameterValueChanged(parameterEntry);
+                    break;
+                case NestedEntry nestedEntry:
+                    nestedEntry.Values.Clear();
+                    await OnNestedValuesChanged(nestedEntry.Values);
+                    break;
+                default:
+                    throw new ArgumentOutOfRangeException(nameof(entry));
             }
         }
     }

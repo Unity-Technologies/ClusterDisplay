@@ -20,8 +20,6 @@ namespace Unity.ClusterDisplay.MissionControl.EngineeringUI.Components
         [Inject]
         MissionParametersEffectiveValuesService EffectiveValuesService { get; set; } = default!;
         [Inject]
-        DialogService DialogService { get; set; } = default!;
-        [Inject]
         ILogger<MissionParameters> Logger { get; set; } = default!;
 
         class Entry

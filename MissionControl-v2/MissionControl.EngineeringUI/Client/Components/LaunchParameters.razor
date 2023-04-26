@@ -35,36 +35,8 @@
             <Template Context="entry">
                 <RadzenButton Icon="refresh" Class="data-grid-icon"
                               Click="@(args => ResetToDefault(entry))" ButtonStyle="ButtonStyle.Light"
-                              Disabled=@(IsDefaultValue(entry)) />
+                              Disabled=@(ShowingDefaultValue(entry)) />
             </Template>
         </RadzenDataGridColumn>
     </Columns>
 </RadzenDataGrid>
-
-@{
-    static bool IsDefaultValue(Entry entry) =>
-        entry switch
-        {
-            ParameterEntry parameterEntry => parameterEntry.ParameterValue is null && parameterEntry.ValidationError is null,
-            NestedEntry nestedEntry => !nestedEntry.Values.Any(),
-            _ => throw new ArgumentOutOfRangeException(nameof(entry))
-        };
-
-    async Task ResetToDefault(Entry entry)
-    {
-        switch (entry)
-        {
-            case ParameterEntry parameterEntry:
-                parameterEntry.ParameterValue = null;
-                parameterEntry.ValidationError = null;
-                OnParameterValueChanged(parameterEntry);
-                break;
-            case NestedEntry nestedEntry:
-                nestedEntry.Values.Clear();
-                await OnNestedValuesChanged(nestedEntry.Values);
-                break;
-            default:
-                throw new ArgumentOutOfRangeException(nameof(entry));
-        }
-    }
-}

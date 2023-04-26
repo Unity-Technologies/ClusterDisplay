@@ -6,6 +6,7 @@
 @inject MissionParametersDesiredValuesService DesiredValuesService;
 @inject NotificationService NotificationService;
 @inject DialogService DialogService;
+@implements IDisposable
 
 <RadzenStack Orientation="Orientation.Horizontal" JustifyContent="JustifyContent.End" AlignItems="AlignItems.Center">
     @foreach (var parameter in m_CommandParameters)
@@ -100,6 +101,11 @@
                 detail: e.Message);
             Console.WriteLine(e.ToString());
         }
+    }
+
+    public void Dispose()
+    {
+        MissionParametersService.Collection.SomethingChanged -= MissionParametersChanged;
     }
 
 }
