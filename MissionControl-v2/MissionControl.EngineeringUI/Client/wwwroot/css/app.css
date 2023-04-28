@@ -8,8 +8,6 @@
     --sidebar-bg-color: #141414;
     --sidebar-bg-hover: rgba(20,20,20,0.4);
     /* heights */
-    --height32: 32px;
-    --height78: 78px;
     --sidebar-width: 208px;
     --sidebar-collapsed-width: 56px;
     --icon-font-size: 20px;
@@ -21,6 +19,13 @@
 }
 
 /************************* Site wide definitions *************************/
+/*Change from `box-sizing: content-box` so that `width` is not affected by `padding` or `border`.*/
+*,
+*::before,
+*::after {
+    box-sizing: border-box;
+}
+
 html, body {
     font-family: 'Inter', Helvetica Neue, Helvetica, Arial, sans-serif;
     background-color: var(--rz-base-100);
@@ -31,18 +36,10 @@ h1:focus {
     outline: none;
 }
 
-/*a, .btn-link {
-    color: #0071c1;
-}*/
-
 .btn-primary {
     color: #fff;
     background-color: #1b6ec2;
     border-color: #1861ac;
-}
-
-.content {
-    padding-top: 1.1rem;
 }
 
 .validation-message {
@@ -148,7 +145,7 @@ h1:focus {
     }
 
     .rz-navigation-item-wrapper-active:hover .rz-navigation-item-text{
-        color: white;
+        color: var(--rz-base-900);
     }
 
     .rz-navigation-item-wrapper:hover .rz-navigation-item-text {
@@ -180,10 +177,6 @@ h1:focus {
     font-weight: 600;
 }
 
-/*.rz-colorpicker, .rz-lookup-search input, .rz-spinner, .rz-calendar .rz-inputtext, .rz-multiselect, .rz-dropdown, .mask, .rz-textarea, .rz-textbox {
-    width: calc(100% - var(--rz-input-height)) !important;
-}*/
-
 /* radzen Default content */
 .content-container {
     display: flex;
@@ -194,17 +187,8 @@ h1:focus {
     padding-right: 12px;
 }
 
-input {
-    border: 1px solid var(--rz-base-300);
-}
-
 .rz-data-row {
-    height: 56px;
     background-color: var(--rz-base-200);
-}
-
-.rz-body {
-    padding: 0px 32px 32px 32px;
 }
 
 .rz-header {
@@ -269,8 +253,9 @@ input {
 
 /* ************************ Custom component ************************ */
 /* non-specific definitions */
-.height-78 {
-    height: 78px;
+
+.height-56 {
+    height: 56px;
 }
 
 .align-flex-right {
@@ -304,7 +289,7 @@ input {
 }
 
 .sidebar-footer {
-    height: 36px;
+    height: 48px;
     background: rgba(255, 255, 255, 0.08);
     box-shadow: inset 0px 1px 0px rgba(255, 255, 255, 0.12);
     padding: 8px 10px 8px 8px;
@@ -349,7 +334,7 @@ input {
     background-color: var(--rz-white);
     display: flex;
     padding-left: 16px;
-    margin-top: 32px;
+    margin-top: 12px;
     align-items: center;
     margin-bottom: -1px;
 }
@@ -431,19 +416,6 @@ input {
 /* Embedded DataGrid controls*/
 .rz-grid-table td .rz-cell-data {
     overflow: visible;
-}
-
-.rz-cell-data .rz-spinner .rz-spinner-input{
-    height: calc(100% - var(--rz-numeric-input-padding));
-}
-
-.rz-cell-data > .rz-textbox {
-    height: calc(100% - var(--rz-input-padding));
-}
-
-.launch-parameter-input .rz-textbox {
-    /* Hack: override the normal text field size for launch parameters */
-    height: 24px;
 }
 
 /* ************************ Responsive Design ************************ */

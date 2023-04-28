@@ -1,5 +1,4 @@
 @page "/launch"
-@inject TooltipService tooltipService
 @using Unity.ClusterDisplay.MissionControl.MissionControl
 @using Unity.ClusterDisplay.MissionControl.EngineeringUI.Components
 
@@ -8,7 +7,6 @@
     var hasChanges = LaunchConfigurationService.WorkValue.Parameters.Any() ||
         LaunchConfigurationService.WorkValue.LaunchComplexes.Any(c => c.Parameters.Any() || c.LaunchPads.Any(p => p.Parameters.Any()));
     var applyAndSaveEnabled = !isRunning || !hasChanges;
-    var applyAndSaveTitle = applyAndSaveEnabled ? "" : "Cannot apply changes while running.";
 }
 <RadzenStack Orientation="Orientation.Horizontal" JustifyContent="JustifyContent.SpaceBetween" AlignItems="AlignItems.Center" class="page-title-row">
     <RadzenText Text="Configuration" TextStyle="TextStyle.H4" />
@@ -18,20 +16,20 @@
         @if (MissionsService.Collection.Any())
         {
             <RadzenSplitButton Click=OnSaveClick Text=@("Save Snapshot")
-                           ButtonStyle="ButtonStyle.Info" Disabled=@(!applyAndSaveEnabled) title=@applyAndSaveTitle>
+                           ButtonStyle="ButtonStyle.Info" Disabled=@(!applyAndSaveEnabled)>
                 <RadzenSplitButtonItem Text="Overwrite snapshot" />
             </RadzenSplitButton>
         }
         else
         {
             <RadzenButton Click=@(_ => SaveAs()) Text=@("Save Snapshot")
-                           ButtonStyle="ButtonStyle.Info" Disabled=@(!applyAndSaveEnabled) title=@applyAndSaveTitle />
+                           ButtonStyle="ButtonStyle.Info" Disabled=@(!applyAndSaveEnabled) />
         }
     </RadzenStack>
 </RadzenStack>
 
 <RadzenStack>
-    <RadzenLabel Text="Project" />
+    <RadzenLabel Text="Asset" />
     <RadzenDropDownDataGrid AllowClear="true" Style="width: 100%" @ref="m_AssetsDropDown"
                             @bind-Value=@LaunchConfigurationService.WorkValue.AssetId
                             Change="@(args => OnSelectedAssetChanged())"
@@ -48,7 +46,7 @@
 
 </RadzenStack>
 
-<RadzenText Text="Launch Complexes Configuration" Class="data-grid-header height-78 rz-border-base-300" TextStyle="TextStyle.DisplayH6" />
+<RadzenText Text="Launch Complexes Configuration" Class="data-grid-header height-56 rz-border-base-300" TextStyle="TextStyle.DisplayH6" />
 <RadzenDataGrid @ref="m_ComplexesGrid" Data=@Complexes.Collection.Values
                 SelectionMode="DataGridSelectionMode.Single" @bind-Value=@m_SelectedLaunchComplexes>
     <Columns>
@@ -66,5 +64,5 @@
     </Columns>
 </RadzenDataGrid>
 
-<RadzenText Text="Global Parameters" Class="data-grid-header height-78 rz-border-base-300" TextStyle="TextStyle.DisplayH6" />
+<RadzenText Text="Global Parameters" Class="data-grid-header height-56 rz-border-base-300" TextStyle="TextStyle.DisplayH6" />
 <LaunchParameters Parameters="@LaunchParameters" Values="@LaunchParametersValue" OnValuesUpdated="LaunchParametersValueUpdate" />
