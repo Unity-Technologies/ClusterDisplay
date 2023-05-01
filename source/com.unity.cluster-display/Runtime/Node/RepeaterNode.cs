@@ -1,9 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using Unity.ClusterDisplay.RepeaterStateMachine;
-#if !UNITY_EDITOR
 using UnityEngine;
-#endif
 
 namespace Unity.ClusterDisplay
 {
@@ -23,15 +22,24 @@ namespace Unity.ClusterDisplay
             : base(config, udpAgent)
         {
             NodeRole = isBackup ? NodeRole.Backup : NodeRole.Repeater;
+            UdpAgent.AddPreProcess(UdpAgentPreProcessPriorityTable.EmitterPlaceholder, PreProcessReceivedMessage);
             SetInitialState(Config.Fence is FrameSyncFence.Hardware ?
                 HardwareSyncInitState.Create(this) : new RegisterWithEmitterState(this));
         }
 
+        /// <summary>
+        /// Index of the last frame we received the data of.
+        /// </summary>
+        public ulong LastReceivedFrameIndex { get; set; }
+
         /// <inheritdoc />
-        public override void DoFrame()
+        public override DoFrameResult DoFrame()
         {
-            ProcessTopologyChanges();
-            base.DoFrame();
+            if (!ProcessTopologyChanges())
+            {
+                return DoFrameResult.ShouldQuit;
+            }
+            return base.DoFrame();
         }
 
         /// <summary>
@@ -40,35 +48,61 @@ namespace Unity.ClusterDisplay
         public static IReadOnlyCollection<MessageType> ReceiveMessageTypes => s_ReceiveMessageTypes;
 
         /// <summary>
-        /// Overridable method called to trigger quit of the application / game
+        /// Is a switch from the role of backup to emitter ready to be done?
         /// </summary>
-        public virtual void Quit()
+        public virtual bool IsBackupToEmitterSwitchReady()
         {
-#if UNITY_EDITOR
-            UnityEditor.EditorApplication.isPlaying = false;
-#else
-            Application.Quit();
-#endif
+            if (m_IsBackupToEmitterSwitchReady)
+            {
+                return true;
+            }
+
+            ProcessTopologyChanges();
+            if (m_EmitterPlaceholder is {RepeatersSynchronized: true} &&
+                m_EmitterPlaceholder.SurveyStableSince > TimeSpan.FromMilliseconds(500))
+            {
+                m_IsBackupToEmitterSwitchReady = true;
+                m_RepeatersSurveyResult = m_EmitterPlaceholder.RepeatersSurveyResult;
+                m_EmitterPlaceholder.Dispose();
+                m_EmitterPlaceholder = null;
+                (m_EmitterPlaceholderUdpAgent as IDisposable)?.Dispose();
+                m_EmitterPlaceholderUdpAgent = null;
+            }
+
+            return m_IsBackupToEmitterSwitchReady;
         }
+
+        /// <summary>
+        /// <see cref="RepeatersSurveyAnswer"/> of every repeater (or backup) nodes once
+        /// <see cref="IsBackupToEmitterSwitchReady"/> returns true.
+        /// </summary>
+        /// <remarks>Will always be empty until IsBackupToEmitterSwitchReady returns true at least once.</remarks>
+        public IReadOnlyCollection<RepeatersSurveyAnswer> RepeatersSurveyResult => m_RepeatersSurveyResult;
 
         /// <summary>
         /// Process cluster topology changes
         /// </summary>
-        void ProcessTopologyChanges()
+        /// <remarks>Should this node continue to do its work?</remarks>
+        bool ProcessTopologyChanges()
         {
             if (UpdatedClusterTopology.Entries != null &&
-                (!m_LastAnalyzedTopology.TryGetTarget(out var lastAnalyzedTopology) ||
-                 !ReferenceEquals(lastAnalyzedTopology, UpdatedClusterTopology.Entries)))
+                !ReferenceEquals(m_LastAnalyzedTopology, UpdatedClusterTopology.Entries))
             {
-                HandleChangesInNodeAssignment(UpdatedClusterTopology.Entries);
-                m_LastAnalyzedTopology.SetTarget(UpdatedClusterTopology.Entries);
+                if (!HandleChangesInNodeAssignment(UpdatedClusterTopology.Entries))
+                {
+                    return false;
+                }
+                m_LastAnalyzedTopology = UpdatedClusterTopology.Entries;
             }
+
+            return true;
         }
 
         /// <summary>
         /// Check if the role or render node id of this node has changed.
         /// </summary>
-        void HandleChangesInNodeAssignment(IReadOnlyList<ClusterTopologyEntry> entries)
+        /// <remarks>Should this node continue to do its work?</remarks>
+        bool HandleChangesInNodeAssignment(IReadOnlyList<ClusterTopologyEntry> entries)
         {
             // Find entry for this node
             ClusterTopologyEntry? thisNodeEntry = null;
@@ -85,11 +119,46 @@ namespace Unity.ClusterDisplay
                 // No entry means the node has been removed from the cluster, let's quit to avoid using power for
                 // nothing...
                 Quit();
-                return;
+                return false;
             }
 
-            NodeRole = thisNodeEntry.Value.NodeRole;
-            RenderNodeId = thisNodeEntry.Value.RenderNodeId;
+            if (NodeRole == NodeRole.Backup && thisNodeEntry.Value.NodeRole == NodeRole.Emitter)
+            {
+                if (m_EmitterPlaceholder == null)
+                {
+                    m_EmitterPlaceholderUdpAgent = UdpAgent.Clone(EmitterPlaceholder.ReceiveMessageTypes.ToArray());
+                    m_EmitterPlaceholder = new(UpdatedClusterTopology, m_EmitterPlaceholderUdpAgent);
+                }
+            }
+            else
+            {
+                NodeRole = thisNodeEntry.Value.NodeRole;
+                RenderNodeId = thisNodeEntry.Value.RenderNodeId;
+            }
+
+            return true;
+        }
+
+        /// <summary>
+        /// Preprocess a received message to detect request for survey (and to answer them as a good citizen).
+        /// </summary>
+        /// <param name="received">Received <see cref="ReceivedMessageBase"/> to preprocess.</param>
+        /// <returns>What to do with the received message.</returns>
+        PreProcessResult PreProcessReceivedMessage(ReceivedMessageBase received)
+        {
+            // Answer repeaters surveys.
+            if (received.Type != MessageType.SurveyRepeaters)
+            {
+                return PreProcessResult.PassThrough();
+            }
+
+            UdpAgent.SendMessage(MessageType.RepeatersSurveyAnswer, new RepeatersSurveyAnswer() {
+                NodeId = Config.NodeId,
+                IPAddressBytes = BitConverter.ToUInt32(UdpAgent.AdapterAddress.GetAddressBytes()),
+                LastReceivedFrameIndex = LastReceivedFrameIndex,
+                StillUseNetworkSync = UsingNetworkSync
+            });
+            return PreProcessResult.Stop();
         }
 
         /// <summary>
@@ -97,11 +166,33 @@ namespace Unity.ClusterDisplay
         /// </summary>
         static MessageType[] s_ReceiveMessageTypes = {MessageType.RepeaterRegistered,
             MessageType.FrameData, MessageType.EmitterWaitingToStartFrame, MessageType.PropagateQuit,
-            MessageType.QuadroBarrierWarmupHeartbeat};
+            MessageType.QuadroBarrierWarmupHeartbeat, MessageType.SurveyRepeaters,
+            MessageType.RetransmitReceivedFrameData
+        };
 
         /// <summary>
         /// Last analyzed topology change.
         /// </summary>
-        WeakReference<IReadOnlyList<ClusterTopologyEntry>> m_LastAnalyzedTopology = new(null);
+        IReadOnlyList<ClusterTopologyEntry> m_LastAnalyzedTopology;
+
+        /// <summary>
+        /// Object created when a change from <see cref="NodeRole.Backup"/> to <see cref="NodeRole.Emitter"/> is
+        /// detected to prepare the terrain before doing the change.
+        /// </summary>
+        EmitterPlaceholder m_EmitterPlaceholder;
+        /// <summary>
+        /// <see cref="IUdpAgent"/> used by <see cref="m_EmitterPlaceholder"/>.
+        /// </summary>
+        IUdpAgent m_EmitterPlaceholderUdpAgent;
+
+        /// <summary>
+        /// Set to true once we had a <c>m_EmitterPlaceholder.IsBackupToEmitterSwitchReady == true</c>.
+        /// </summary>
+        bool m_IsBackupToEmitterSwitchReady;
+        /// <summary>
+        /// <c>m_EmitterPlaceholder.RepeatersSurveyResult</c> once
+        /// <c>m_EmitterPlaceholder.IsBackupToEmitterSwitchReady == true</c>.
+        /// </summary>
+        IReadOnlyCollection<RepeatersSurveyAnswer> m_RepeatersSurveyResult = new RepeatersSurveyAnswer[]{};
     }
 }

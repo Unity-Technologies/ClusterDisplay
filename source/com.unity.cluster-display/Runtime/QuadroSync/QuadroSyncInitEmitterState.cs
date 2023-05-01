@@ -12,7 +12,7 @@ namespace Unity.ClusterDisplay
         internal QuadroSyncInitEmitterState(ClusterNode node)
             : base(node) { }
 
-        protected override NodeState DoFrameImplementation()
+        protected override (NodeState, DoFrameResult?) DoFrameImplementation()
         {
             var ret = base.DoFrameImplementation();
 

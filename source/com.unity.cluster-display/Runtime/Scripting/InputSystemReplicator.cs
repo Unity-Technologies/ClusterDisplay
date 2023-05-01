@@ -39,6 +39,9 @@ namespace Unity.ClusterDisplay.Scripting
         bool m_UpdatesControlledExternally;
         NodeRole m_NodeRole;
 
+        static object s_InjectedReplicatorLock = new();
+        static InputSystemReplicator s_InjectedReplicator;
+
         struct ClusterInputSystemUpdate
         {
 
@@ -46,13 +49,35 @@ namespace Unity.ClusterDisplay.Scripting
 
         void InjectInputUpdatePoint()
         {
-            // Do our InputSystem update before script Update
-            PlayerLoopExtensions.RegisterUpdate<Update.ScriptRunBehaviourUpdate, ClusterInputSystemUpdate>(UpdateInputSystem, 0);
+            lock (s_InjectedReplicatorLock)
+            {
+                // Ok, now the question, why do we keep this static variable and call a static delegate using the saved
+                // this pointer instead of simply creating a delegate to an instance?  Based on experimentation it looks
+                // like changes made to the player loop will only be considered starting next frame.  So in the case
+                // where a backup node is replaced by an emitter node (fail over), the old repeater's UpdateInputSystem
+                // would be called for the first frame after the change of node role causing the first WriteInputData to
+                // have no data to send and then LoadInputData on the repeater nodes to fail because of 0 bytes of data
+                // is received.
+                //
+                // LoadInputData has also been improved to support 0 bytes of received data (as this can happen when not
+                // running with Delay Repeaters), but it is still a good thing to fix the problem that one frame of
+                // input data would have been lost at start when switching from backup to emitter.
+                Debug.Assert(s_InjectedReplicator == null);
+                s_InjectedReplicator = this;
+
+                // Do our InputSystem update before script Update
+                PlayerLoopExtensions.RegisterUpdate<Update.ScriptRunBehaviourUpdate, ClusterInputSystemUpdate>(UpdateInputSystem, 0);
+            }
         }
 
         void RemoveInputUpdatePoint()
         {
-            PlayerLoopExtensions.DeregisterUpdate<ClusterInputSystemUpdate>(UpdateInputSystem);
+            lock (s_InjectedReplicatorLock)
+            {
+                Debug.Assert(s_InjectedReplicator == this);
+                s_InjectedReplicator = null;
+                PlayerLoopExtensions.DeregisterUpdate<ClusterInputSystemUpdate>(UpdateInputSystem);
+            }
         }
 
         public InputSystemReplicator(NodeRole nodeRole)
@@ -171,6 +196,13 @@ namespace Unity.ClusterDisplay.Scripting
 
         bool LoadInputData(NativeArray<byte> stateData)
         {
+            // Skip loading if empty (it would cause problems to try to load that empty data and it can happen on the
+            // first frame when delayed repeaters is off).
+            if (stateData.Length == 0)
+            {
+                return true;
+            }
+
             // There's no API to copy unmanaged bytes directly into InputEventTrace, so we'll take a roundabout
             // approach using MemoryStream.
             // First, copy the bytes into a MemoryStream.
@@ -242,7 +274,15 @@ namespace Unity.ClusterDisplay.Scripting
             m_EventTrace.Dispose();
         }
 
-        void UpdateInputSystem()
+        static void UpdateInputSystem()
+        {
+            lock (s_InjectedReplicatorLock)
+            {
+                s_InjectedReplicator?.UpdateInputSystemInstance();
+            }
+        }
+
+        void UpdateInputSystemInstance()
         {
             if (!m_UpdatesControlledExternally)
             {
@@ -262,6 +302,7 @@ namespace Unity.ClusterDisplay.Scripting
                     m_MemoryStream.Flush();
                     m_MemoryStream.Position = 0;
                     break;
+
                 // Other cases have nothing to do right now...
             }
 

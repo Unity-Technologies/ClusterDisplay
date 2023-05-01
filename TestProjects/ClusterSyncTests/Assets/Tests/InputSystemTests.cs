@@ -1,18 +1,15 @@
 #if ENABLE_INPUT_SYSTEM
 using System;
 using System.Collections;
-using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using NUnit.Framework;
 using Unity.ClusterDisplay.Scripting;
-using Unity.ClusterDisplay.Utils;
 using Unity.Collections;
 using UnityEngine;
 using UnityEngine.TestTools;
 using UnityEngine.InputSystem;
 using UnityEngine.InputSystem.LowLevel;
-using Object = UnityEngine.Object;
 
 namespace Unity.ClusterDisplay.Tests
 {
@@ -48,7 +45,7 @@ namespace Unity.ClusterDisplay.Tests
 
             // Set up dummy UDP networking
             var frameSplitter = new FrameDataSplitter(m_EmitterAgent);
-            using var frameAssembler = new FrameDataAssembler(m_RepeaterAgent, false);
+            using var frameAssembler = new FrameDataAssembler(m_RepeaterAgent, false, 0);
 
             // The component under test
             using var replicator = new InputSystemReplicator(NodeRole.Emitter);
@@ -83,6 +80,7 @@ namespace Unity.ClusterDisplay.Tests
                 receiveStream.Write(data.AsReadOnlySpan());
                 receiveStream.Flush();
                 receiveStream.Position = 0;
+                // ReSharper disable once AccessToDisposedClosure
                 eventTrace.ReadFrom(receiveStream);
                 return true;
             });
@@ -110,6 +108,7 @@ namespace Unity.ClusterDisplay.Tests
 
             // Test repeater logic (just the part that responds to framedata)
             using FrameDataBuffer frameData = new();
+            // ReSharper disable once AccessToDisposedClosure
             frameData.Store((int)StateID.InputSystem, buffer => inputStream.Read(buffer));
             inputStream.SetLength(0);
 
@@ -121,7 +120,7 @@ namespace Unity.ClusterDisplay.Tests
         [UnityTest]
         public IEnumerator TestRepeaterReceivesInputs()
         {
-            using var frameAssembler = new FrameDataAssembler(m_RepeaterAgent, false);
+            using var frameAssembler = new FrameDataAssembler(m_RepeaterAgent, false, 0);
             using var replicator = new InputSystemReplicator(NodeRole.Repeater);
 
             // Set up some test bindings

@@ -255,6 +255,7 @@ GameObject:
   - component: {fileID: 540867422}
   - component: {fileID: 540867428}
   - component: {fileID: 540867427}
+  - component: {fileID: 540867429}
   m_Layer: 0
   m_Name: Cube
   m_TagString: Untagged
@@ -387,6 +388,23 @@ PlayableDirector:
     value: {fileID: 540867427}
   m_ExposedReferences:
     m_References: []
+--- !u!114 &540867429
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 540867421}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: aa9ad4c906b726d4e8c716193f218baf, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  materials:
+  - {fileID: 2100000, guid: 702035ee2746efd48bb2fdbcd7edda3a, type: 2}
+  - {fileID: 2100000, guid: 6679ff1118516d943bb62f358ce8c2f8, type: 2}
+  - {fileID: 2100000, guid: 1410367f478e58947a616f00c4a01d5a, type: 2}
+  materialIndex: 0
 --- !u!1001 &934153190
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -745,7 +763,7 @@ MonoBehaviour:
   m_ClearDepth: 1
   m_AllowXRRendering: 1
   m_UseScreenCoordOverride: 0
-  m_ScreenSizeOverride: {x: 1608, y: 904, z: 0.00062189053, w: 0.0011061947}
+  m_ScreenSizeOverride: {x: 1640, y: 922, z: 0.0006097561, w: 0.0010845987}
   m_ScreenCoordScaleBias: {x: 0.5, y: 0.5, z: 0, w: 0.5}
   m_RequiresDepthTexture: 0
   m_RequiresColorTexture: 0

@@ -27,8 +27,9 @@ namespace Unity.ClusterDisplay.Tests
                 Assert.That(IsValidRepeaterRegistered(receivedMessage, registeringMessage, true), Is.True);
             });
 
-            var nextState = testState.DoFrame();
+            var (nextState, doFrameResult) = testState.DoFrame();
             Assert.That(nextState, Is.TypeOf(typeof(EmitFrameState)));
+            Assert.That(doFrameResult, Is.Null);
             TestNodeState(testNode, repeatersAgent);
             Assert.DoesNotThrow(repeaterTask.Wait);
         }
@@ -58,8 +59,9 @@ namespace Unity.ClusterDisplay.Tests
                 Assert.That(found, Is.True);
             })).ToArray(); // ToArray to force LINQ's Select to be executed and tasks created
 
-            var nextState = testState.DoFrame();
+            var (nextState, doFrameResult) = testState.DoFrame();
             Assert.That(nextState, Is.TypeOf(typeof(EmitFrameState)));
+            Assert.That(doFrameResult, Is.Null);
             TestNodeState(testNode, repeatersAgent);
             Assert.DoesNotThrow(() => Task.WaitAll(repeatersTask));
         }
@@ -95,8 +97,9 @@ namespace Unity.ClusterDisplay.Tests
                 Assert.That(found, Is.True);
             })).ToArray(); // ToArray to force LINQ's Select to be executed and tasks created
 
-            var nextState = testState.DoFrame();
+            var (nextState, doFrameResult) = testState.DoFrame();
             Assert.That(nextState, Is.TypeOf(typeof(EmitFrameState)));
+            Assert.That(doFrameResult, Is.Null);
             TestNodeState(testNode, presentRepeatersAgent);
             Assert.DoesNotThrow(() => Task.WaitAll(repeatersTask));
         }
@@ -132,8 +135,9 @@ namespace Unity.ClusterDisplay.Tests
                 Assert.That(found, Is.True);
             })).ToArray(); // ToArray to force LINQ's Select to be executed and tasks created
 
-            var nextState = testState.DoFrame();
+            var (nextState, doFrameResult) = testState.DoFrame();
             Assert.That(nextState, Is.TypeOf(typeof(EmitFrameState)));
+            Assert.That(doFrameResult, Is.Null);
             TestNodeState(testNode, repeatersAgent);
             Assert.DoesNotThrow(() => Task.WaitAll(repeatersTask));
         }

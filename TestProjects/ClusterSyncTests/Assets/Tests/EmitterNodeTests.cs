@@ -49,7 +49,8 @@ namespace Unity.ClusterDisplay.Tests
         EmitterNode m_Node;
         EventBus<TestData> m_NodeEventBus;
 
-        void SetUp(bool repeatersDelayed)
+        void SetUp(bool repeatersDelayed, IReadOnlyCollection<RepeatersSurveyAnswer> repeatersSurveyResult = null,
+            ulong firstFrameIndex = 0)
         {
             m_Repeaters = k_RepeaterIds.Select( nodeId =>
             {
@@ -58,7 +59,7 @@ namespace Unity.ClusterDisplay.Tests
                 testConfig.ReceivedMessagesType = RepeaterNode.ReceiveMessageTypes.ToArray();
                 ret.NodeId = nodeId;
                 ret.UdpAgent = new UdpAgent(testConfig);
-                ret.Assembler = new FrameDataAssembler(ret.UdpAgent, false);
+                ret.Assembler = new FrameDataAssembler(ret.UdpAgent, false, nodeId);
                 ret.EventBus = new EventBus<TestData>(EventBusFlags.ReadFromCluster);
                 ret.EventBus.Subscribe(data =>
                 {
@@ -75,12 +76,14 @@ namespace Unity.ClusterDisplay.Tests
                 NodeId = k_EmitterId,
                 HandshakeTimeout = NodeTestUtils.Timeout,
                 CommunicationTimeout = NodeTestUtils.Timeout,
-                RepeatersDelayed = repeatersDelayed
+                RepeatersDelayed = repeatersDelayed,
+                FirstFrameIndex = firstFrameIndex
             };
 
             var emitterNodeConfig = new EmitterNodeConfig
             {
-                ExpectedRepeaterCount = (byte)k_RepeaterIds.Length
+                ExpectedRepeaterCount = (byte)k_RepeaterIds.Length,
+                RepeatersSurveyResult = repeatersSurveyResult
             };
 
             m_Node = new EmitterNode(nodeConfig, emitterNodeConfig, new UdpAgent(emitterUdpConfig));
@@ -556,6 +559,103 @@ namespace Unity.ClusterDisplay.Tests
             }
         }
 
+        [UnityTest]
+        public IEnumerator SkippingOfRepeatersGreeting()
+        {
+            const ulong firstFrameIndex = 42;
+
+            bool IsNodeUsingNetworkSync(byte nodeId) => nodeId == 2;
+            RepeatersSurveyAnswer[] repeatersSurveyAnswers = k_RepeaterIds.Select(nodeId => new RepeatersSurveyAnswer()
+                {
+                    IPAddressBytes = nodeId | (uint)nodeId << 8 | (uint)nodeId << 16 | (uint)nodeId << 24,
+                    NodeId = nodeId,
+                    StillUseNetworkSync = IsNodeUsingNetworkSync(nodeId)
+                }).ToArray();
+            SetUp(false, repeatersSurveyAnswers, firstFrameIndex);
+            long testEndTimestamp = StopwatchUtils.TimestampIn(TimeSpan.FromSeconds(15));
+
+            // ======== First Frame ======
+            var repeatersJobForFrame0 = m_Repeaters.Select(rd => Task.Run(() =>
+            {
+                // A little sleep to be sure emitter is really waiting after repeaters
+                Thread.Sleep(50);
+
+                // No need to send a RepeaterWaitingToStartFrame or wait for a EmitterWaitingToStartFrame.  Emitter is
+                // skipping straight to transmission of FrameData for the first frame when skipping greetings.
+
+                // We should now be receiving FrameData for FrameIndex 0
+                int repeatersWithFrame0 = ConsumeFirstMessageOfRepeaterWhere<FrameData>(rd,
+                    testEndTimestamp, (message, repeaterData) =>
+                    {
+                        Assert.That(message.Payload.FrameIndex, Is.EqualTo(firstFrameIndex));
+                        // FrameDataAssembler should have assembled everything into a single frame
+                        Assert.That(message.Payload.DatagramDataOffset, Is.Zero);
+                        Assert.That(message.Payload.DataLength, Is.EqualTo(message.ExtraData.Length));
+                        return true;
+                    }, new[]{ MessageType.EmitterWaitingToStartFrame });
+                Assert.That(repeatersWithFrame0, Is.EqualTo(1));
+            })).ToList();
+
+            m_Node.DoFrame();
+            Assert.That(Task.WhenAll(repeatersJobForFrame0).Wait(TimeSpan.FromSeconds(15)), Is.True);
+            TestRepeatersPresence();
+
+            // ======= End of Frame ===========
+            m_Node.ConcludeFrame();
+            yield return null;
+
+            // ======= Frame 1 -> 4 ===========
+            for (ulong frameIdx = 1; frameIdx < 5; ++frameIdx)
+            {
+                ulong localFrameIndex = frameIdx; // To avoid "captured variable is modified in the outer scope" warnings
+                var repeatersJobForFrame = m_Repeaters.Select(rd => Task.Run(() =>
+                {
+                    // A little sleep to be sure emitter is really waiting after repeaters
+                    Thread.Sleep(50);
+
+                    // Inform repeaters ready to start frame (if this node is still using network sync)
+                    if (IsNodeUsingNetworkSync(rd.NodeId))
+                    {
+                        rd.UdpAgent.SendMessage(MessageType.RepeaterWaitingToStartFrame,
+                            new RepeaterWaitingToStartFrame
+                            {
+                                FrameIndex = firstFrameIndex + localFrameIndex, NodeId = rd.NodeId,
+                                WillUseNetworkSyncOnNextFrame = true
+                            });
+
+                        // Receive answers
+                        int acknowledgedRepeaters = ConsumeFirstMessageOfRepeaterWhere<EmitterWaitingToStartFrame>(rd,
+                            testEndTimestamp, (message, repeaterData) =>
+                            {
+                                Assert.That(message.Payload.FrameIndex, Is.EqualTo(firstFrameIndex + localFrameIndex));
+                                return !message.Payload.IsWaitingOn(repeaterData.NodeId);
+                            });
+                        Assert.That(acknowledgedRepeaters, Is.EqualTo(1));
+                    }
+
+                    // We should now be receiving FrameData for FrameIndex 0
+                    int repeatersWithFrame0 = ConsumeFirstMessageOfRepeaterWhere<FrameData>(rd,
+                        testEndTimestamp, (message, repeaterData) =>
+                        {
+                            Assert.That(message.Payload.FrameIndex, Is.EqualTo(firstFrameIndex + localFrameIndex));
+                            // FrameDataAssembler should have assembled everything into a single frame
+                            Assert.That(message.Payload.DatagramDataOffset, Is.Zero);
+                            Assert.That(message.Payload.DataLength, Is.EqualTo(message.ExtraData.Length));
+                            return true;
+                        }, new[]{ MessageType.EmitterWaitingToStartFrame });
+                    Assert.That(repeatersWithFrame0, Is.EqualTo(1));
+                })).ToList();
+
+                m_Node.DoFrame();
+                Assert.That(Task.WhenAll(repeatersJobForFrame).Wait(TimeSpan.FromSeconds(15)), Is.True);
+                TestRepeatersPresence();
+
+                // ======= End of Frame ===========
+                m_Node.ConcludeFrame();
+                yield return null;
+            }
+        }
+
         void ClearRepeatersMessagesOfType(MessageType messageType)
         {
             for (int repeaterIndex = 0; repeaterIndex < k_RepeaterIds.Length; ++repeaterIndex)
@@ -581,7 +681,20 @@ namespace Unity.ClusterDisplay.Tests
         }
 
         int ConsumeFirstMessageOfRepeaterWhere<T>(long testEndTimestamp, Func<ReceivedMessage<T>, RepeaterData, bool> predicate,
-            IEnumerable<MessageType> typesToSkip = null) where T: unmanaged
+            IEnumerable<MessageType> typesToSkip = null) where T : unmanaged
+        {
+            int consumedCount = 0;
+            for (int repeaterIndex = 0; repeaterIndex < k_RepeaterIds.Length; ++repeaterIndex)
+            {
+                consumedCount += ConsumeFirstMessageOfRepeaterWhere(m_Repeaters[repeaterIndex], testEndTimestamp,
+                    predicate, typesToSkip);
+            }
+            return consumedCount;
+        }
+
+        static int ConsumeFirstMessageOfRepeaterWhere<T>(RepeaterData repeaterData, long testEndTimestamp,
+            Func<ReceivedMessage<T>, RepeaterData, bool> predicate, IEnumerable<MessageType> typesToSkip = null)
+            where T: unmanaged
         {
             var typesToSkipHashSet = new HashSet<MessageType>();
             if (typesToSkip != null)
@@ -593,29 +706,26 @@ namespace Unity.ClusterDisplay.Tests
             }
 
             int consumedCount = 0;
-            for (int repeaterIndex = 0; repeaterIndex < k_RepeaterIds.Length; ++repeaterIndex)
+            for (;;)
             {
-                for (;;)
+                using var receivedMessage = repeaterData.UdpAgent.TryConsumeNextReceivedMessage(
+                    StopwatchUtils.TimeUntil(testEndTimestamp));
+                if (receivedMessage == null)
+                {   // Timeout
+                    break;
+                }
+
+                if (typesToSkipHashSet.Contains(receivedMessage.Type))
+                {   // Type of message to ignore
+                    continue;
+                }
+
+                var receivedOfType = receivedMessage as ReceivedMessage<T>;
+                Assert.That(receivedOfType, Is.Not.Null);
+                if (predicate(receivedOfType, repeaterData))
                 {
-                    using var receivedMessage = m_Repeaters[repeaterIndex].UdpAgent.TryConsumeNextReceivedMessage(
-                        StopwatchUtils.TimeUntil(testEndTimestamp));
-                    if (receivedMessage == null)
-                    {   // Timeout
-                        break;
-                    }
-
-                    if (typesToSkipHashSet.Contains(receivedMessage.Type))
-                    {   // Type of message to ignore
-                        continue;
-                    }
-
-                    var receivedOfType = receivedMessage as ReceivedMessage<T>;
-                    Assert.That(receivedOfType, Is.Not.Null);
-                    if (predicate(receivedOfType, m_Repeaters[repeaterIndex]))
-                    {
-                        ++consumedCount;
-                        break;
-                    }
+                    ++consumedCount;
+                    break;
                 }
             }
             return consumedCount;

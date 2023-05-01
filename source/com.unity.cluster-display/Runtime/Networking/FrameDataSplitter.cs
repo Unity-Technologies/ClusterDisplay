@@ -22,7 +22,8 @@ namespace Unity.ClusterDisplay
         /// buffers used to store the frame data?</param>
         /// <param name="retransmitHistory">Number of frames we keep in history to be retransmitted (must be >= 2).</param>
         /// <exception cref="ArgumentException">If retransmitHistory &lt; 2.</exception>
-        public FrameDataSplitter(IUdpAgent udpAgent, bool reuseFrameDataBuffers = false, int retransmitHistory = 2)
+        public FrameDataSplitter(IUdpAgent udpAgent, bool reuseFrameDataBuffers = false, 
+        	int retransmitHistory = NetworkingHelpers.DefaultRetransmitHistoryLength)
         {
             if (retransmitHistory < 2)
             {
@@ -47,7 +48,7 @@ namespace Unity.ClusterDisplay
             }
             m_NewestSentFramesInformationIndex = retransmitHistory - 1;
 
-            UdpAgent.AddPreProcess(UdpAgentPreProcessPriorityTable.retransmitFrameDataProcessing, PreProcessReceivedMessage);
+            UdpAgent.AddPreProcess(UdpAgentPreProcessPriorityTable.RetransmitFrameDataProcessing, PreProcessReceivedMessage);
         }
 
         /// <summary>

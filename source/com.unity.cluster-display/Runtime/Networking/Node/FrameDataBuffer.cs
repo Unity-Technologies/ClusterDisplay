@@ -186,6 +186,35 @@ namespace Unity.ClusterDisplay
         }
 
         /// <summary>
+        /// Set all the data of this <see cref="FrameDataBuffer"/> to the given set of bytes (which will be what
+        /// <see cref="Data"/> will return).
+        /// </summary>
+        /// <param name="copyFrom">Buffer from which to copy the data.</param>
+        public void CopyFrom(NativeArray<byte>.ReadOnly copyFrom)
+        {
+            if (copyFrom.Length > m_Data.Length)
+            {
+                m_Data.Dispose();
+                m_Data = new(copyFrom.Length, Allocator.Persistent);
+            }
+            NativeArray<byte>.Copy(copyFrom, m_Data, copyFrom.Length);
+            Length = copyFrom.Length;
+        }
+
+        /// <summary>
+        /// Use the given NativeArray as our storage (and assumes every bit of data in it contains valid data).
+        /// </summary>
+        /// <param name="toAdopt"><see cref="NativeArray{T}"/> to use as our own.  Caller should stop using it after
+        /// this method is called.</param>
+        public void AdoptNativeArray(ref NativeArray<byte> toAdopt)
+        {
+            m_Data.Dispose();
+            m_Data = toAdopt;
+            Length = m_Data.Length;
+            toAdopt = new();
+        }
+
+        /// <summary>
         /// Ensure the storage of the <see cref="FrameDataBuffer"/> can at least store the requested amount of data.
         /// </summary>
         /// <param name="requiredCapacity">Minimum capacity needed.</param>

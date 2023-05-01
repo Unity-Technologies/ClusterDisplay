@@ -45,14 +45,13 @@ namespace Unity.ClusterDisplay.Graphics
                 var missionControlSettings = MissionControlSettings.Current;
                 if (ClusterRenderer.TryGetInstance(out var clusterRenderer, logError: false, includeInactive: false))
                 {
-                    missionControlSettings.PolicyParameters = clusterRenderer.ProjectionPolicy switch
+                    if (clusterRenderer.ProjectionPolicy is TiledProjection)
                     {
-                        TiledProjection => AddTiledProjectionPolicyParameters(),
-                        _ => new()
-                    };
+                        AddTiledProjectionPolicyParameters();
+                    }
                     if (clusterRenderer.ProjectionPolicy.SupportsTestPattern)
                     {
-                        missionControlSettings.PolicyParameters.GlobalParameters.Add(new()
+                        MissionControlParameters.Instance.GlobalParameters.Add(new()
                         {
                             Name = "Show Test Pattern",
                             Id = ProjectionPolicy.TestPatternParameterId,
@@ -61,7 +60,7 @@ namespace Unity.ClusterDisplay.Graphics
                             DefaultValue = false
                         });
                     }
-                    if (missionControlSettings.PolicyParameters.Any)
+                    if (MissionControlParameters.Instance.Any)
                     {
                         // Ensure we have a ClusterRenderMissionControlUtils on the clusterRender.
                         if (clusterRenderer.GetComponent<ClusterRendererMissionControlUtils>() == null)
@@ -78,18 +77,19 @@ namespace Unity.ClusterDisplay.Graphics
         /// <summary>
         /// Returns a list of <see cref="LaunchParameter"/>s to allow customization of a <see cref="TiledProjection"/>.
         /// </summary>
-        static MissionControlSettings.ParametersContainer AddTiledProjectionPolicyParameters()
+        static void AddTiledProjectionPolicyParameters()
         {
-            MissionControlSettings.ParametersContainer ret = new();
-            AddVector2IntParameter(ret.GlobalParameters, "Tile grid size", TiledProjection.GridSizeParameterId,
-                "Number of horizontal displays.", "Number of vertical displays.");
-            AddVector2IntParameter(ret.GlobalParameters, "Physical screen size",
+            AddVector2IntParameter(MissionControlParameters.Instance.GlobalParameters,
+                "Tile grid size", TiledProjection.GridSizeParameterId,"Number of horizontal displays.",
+                "Number of vertical displays.");
+            AddVector2IntParameter(MissionControlParameters.Instance.GlobalParameters, "Physical screen size",
                 TiledProjection.PhysicalScreenSizeParameterId,
                 "Physical width of a display (not to be confused with screen size in pixels).",
                 "Physical height of a display (not to be confused with screen size in pixels).");
-            AddVector2IntParameter(ret.GlobalParameters, "Bezel", TiledProjection.BezelParameterId,
-                "Physical width of display bezels.", "Physical height of display bezels.");
-            ret.GlobalParameters.Add(new()
+            AddVector2IntParameter(MissionControlParameters.Instance.GlobalParameters, "Bezel",
+                TiledProjection.BezelParameterId, "Physical width of display bezels.",
+                "Physical height of display bezels.");
+            MissionControlParameters.Instance.GlobalParameters.Add(new()
             {
                 Name = Labels.GetName(Labels.Field.PositionNonFullscreenWindows),
                 Id = TiledProjection.PositionWindowsParameterId,
@@ -97,7 +97,6 @@ namespace Unity.ClusterDisplay.Graphics
                 Type = LaunchParameterType.Boolean,
                 DefaultValue = false
             });
-            return ret;
         }
 
         /// <summary>

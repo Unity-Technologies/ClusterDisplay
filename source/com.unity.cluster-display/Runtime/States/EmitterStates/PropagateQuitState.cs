@@ -22,7 +22,7 @@ namespace Unity.ClusterDisplay.EmitterStateMachine
         {
         }
 
-        protected override NodeState DoFrameImplementation()
+        protected override (NodeState, DoFrameResult?) DoFrameImplementation()
         {
             var udpAgent = Node.UdpAgent;
 
@@ -63,7 +63,7 @@ namespace Unity.ClusterDisplay.EmitterStateMachine
 
             // That's it, every not have received the quit signal, we can now quit.
             Quit();
-            return null;
+            return (null, DoFrameResult.FrameDone);
         }
 
         /// <summary>

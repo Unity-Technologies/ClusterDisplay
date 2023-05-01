@@ -17,10 +17,12 @@ namespace Unity.ClusterDisplay
         /// <summary>
         /// Method to be called every time a frame is to be processed by that <see cref="NodeState"/>.
         /// </summary>
-        /// <returns>If <c>null</c>, everything worked fine and we are done processing that frame.  If not <c>null</c>
-        /// then this state processing is over and the newly returned <see cref="NodeState"/> must also be called
-        /// for the same frame as the frame for which <see cref="DoFrame"/> was called.</returns>
-        public unsafe NodeState DoFrame()
+        /// <returns>Either: Not null <see cref="NodeState"/> with unset <see cref="DoFrameResult"/> to indicate that
+        /// the <see cref="NodeState"/> is over and current frame needs to execute the returned <see cref="NodeState"/>
+        /// before completing the frame.<br/><br/>Or: A null <see cref="NodeState"/> and a set
+        /// <see cref="DoFrameResult"/> to indicate that this step is done executing the frame (and it must be called
+        /// again for next frame).</returns>
+        public unsafe (NodeState, DoFrameResult?) DoFrame()
         {
             var metadata = stackalloc ProfilerMarkerData[1];
             metadata[0].Type = (byte)ProfilerMarkerDataType.UInt64;
@@ -43,10 +45,12 @@ namespace Unity.ClusterDisplay
         /// Implementation of <see cref="DoFrame"/> to be defined by specializing classes that is called every time a
         /// frame is to be processed by that <see cref="NodeState"/>.
         /// </summary>
-        /// <returns>If <c>null</c>, everything worked fine and we are done processing that frame.  If not <c>null</c>
-        /// then this state processing is over and the newly returned <see cref="NodeState"/> must also be called
-        /// for the same frame as the frame for which <see cref="DoFrame"/> was called.</returns>
-        protected abstract NodeState DoFrameImplementation();
+        /// <returns>Either: Not null <see cref="NodeState"/> with unset <see cref="DoFrameResult"/> to indicate that
+        /// the <see cref="NodeState"/> is over and current frame needs to execute the returned <see cref="NodeState"/>
+        /// before completing the frame.<br/><br/>Or: A null <see cref="NodeState"/> and a set
+        /// <see cref="DoFrameResult"/> to indicate that this step is done executing the frame (and it must be called
+        /// again for next frame).</returns>
+        protected abstract (NodeState, DoFrameResult?) DoFrameImplementation();
 
         /// <summary>
         /// Method to be implemented by specializing classes to return a static variable fill by calling

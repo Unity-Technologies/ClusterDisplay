@@ -12,7 +12,7 @@ namespace Unity.ClusterDisplay
         internal QuadroSyncInitRepeaterState(ClusterNode node)
             : base(node) { }
 
-        protected override NodeState DoFrameImplementation()
+        protected override (NodeState, DoFrameResult?) DoFrameImplementation()
         {
             var ret = base.DoFrameImplementation();
 
@@ -34,6 +34,12 @@ namespace Unity.ClusterDisplay
                 m_HeartbeatChangedEvent = new(false);
                 m_StatusChangedEvent = new(false);
                 m_BarrierSyncDeadline = StopwatchUtils.TimestampIn(Node.Config.HandshakeTimeout);
+
+                if (ServiceLocator.TryGet(out IClusterSyncState clusterSync) &&
+                    clusterSync.NodeRole is NodeRole.Backup && clusterSync.RepeatersDelayedOneFrame)
+                {
+                    clusterSync.OnNodeRoleChanged += ProcessBackupToEmitter;
+                }
 
                 Node.UdpAgent.AddPreProcess(UdpAgentPreProcessPriorityTable.MessageSniffing, SniffReceivedMessages);
                 SetBarrierWarmupCallback(BarrierWarmupCallback);
@@ -330,6 +336,33 @@ namespace Unity.ClusterDisplay
             Debug.Assert(Monitor.IsEntered(m_Lock));
             m_Status = status;
             m_StatusChangedEvent.Set();
+        }
+
+        /// <summary>
+        /// Delegate that will monitor for changes in node role and perform some QuadroSync specific processing when a
+        /// node changes from backup to emitter.
+        /// </summary>
+        /// <exception cref="NotImplementedException"></exception>
+        static void ProcessBackupToEmitter()
+        {
+            if (ServiceLocator.TryGet(out IClusterSyncState clusterSync) &&
+                clusterSync.NodeRole is NodeRole.Emitter && clusterSync.RepeatersDelayedOneFrame)
+            {
+                // Switching from backup to emitter when RepeatersDelayedOneFrame is true means that ClusterRenderer
+                // (or in fact the IPresenter inside of it) will now buffer one frame before presenting it.  This means
+                // that if we do not do anything special frames would now be presented one frame of.  To fix that
+                // problem we need to ask for the next frame to be presented without synchronization so that it is
+                // presented "quickly" and we can then go back on using synchronized output normally...
+                GfxPluginQuadroSyncSystem.ExecuteQuadroSyncCommand(
+                    GfxPluginQuadroSyncSystem.EQuadroSyncRenderEvent.QuadroSyncSkipSyncForNextFrame, new IntPtr());
+                clusterSync.OnNodeRoleChanged -= ProcessBackupToEmitter;
+            }
+            else if (clusterSync is {NodeRole: not (NodeRole.Backup or NodeRole.Unassigned)})
+            {
+                // The node switched to something else than an emitter.  So we will never need to change ask QuadroSync
+                // to skip synchronized present of the next frame, so remove this delegate.
+                clusterSync.OnNodeRoleChanged -= ProcessBackupToEmitter;
+            }
         }
 
         /// <summary>

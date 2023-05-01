@@ -27,9 +27,10 @@ namespace Unity.ClusterDisplay.Tests
                 repeatersAgent[0].SendMessage(MessageType.QuitReceived, new QuitReceived() {NodeId = 28});
             });
 
-            var nextState = testState.DoFrame();
+            var (nextState, doFrameResult) = testState.DoFrame();
             Assert.That(testState.QuitReceived, Is.True);
             Assert.That(nextState, Is.Null);
+            Assert.That(doFrameResult, Is.EqualTo(DoFrameResult.FrameDone));
             Assert.DoesNotThrow(repeaterTask.Wait);
         }
 
@@ -73,13 +74,14 @@ namespace Unity.ClusterDisplay.Tests
             });
 
             var doFrameTimer = Stopwatch.StartNew();
-            var nextState = testState.DoFrame();
+            var (nextState, doFrameResult) = testState.DoFrame();
             doFrameTimer.Stop();
             // DoFrame has to take at least 200 ms as PropagateQuitState repeat every 100 ms and wait to receive the
             // third one before at last sending a reply.
             Assert.That(doFrameTimer.Elapsed, Is.GreaterThanOrEqualTo(TimeSpan.FromMilliseconds(200)));
             Assert.That(testState.QuitReceived, Is.True);
             Assert.That(nextState, Is.Null);
+            Assert.That(doFrameResult, Is.EqualTo(DoFrameResult.FrameDone));
             Assert.DoesNotThrow(repeater1Task.Wait);
             Assert.DoesNotThrow(repeater2Task.Wait);
         }
