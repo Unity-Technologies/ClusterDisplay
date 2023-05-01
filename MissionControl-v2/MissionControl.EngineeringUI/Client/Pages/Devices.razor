@@ -29,7 +29,7 @@
         </RadzenDataGridColumn>
         <RadzenDataGridColumn TItem="LaunchComplex" Title="Name" Property="Name" />
         <RadzenDataGridColumn TItem="LaunchComplex" Title="HangarBay endpoint" Property="HangarBay.Endpoint" Sortable="false" />
-        <RadzenDataGridColumn TItem="LaunchComplex" Title="Launchpad count" Sortable="false">
+        <RadzenDataGridColumn TItem="LaunchComplex" Title="Launchpad count">
             <Template Context="launchComplex">
                 <span>@launchComplex.LaunchPads.Count()</span>
             </Template>

@@ -70,9 +70,8 @@
             !await DialogService.CustomConfirm(
                 confirmation.FullText,
                 confirmation.Title ?? "",
-                new ConfirmOptions()
+                new DialogExtensions.CustomConfirmOptions()
                 {
-                    ShowTitle = string.IsNullOrEmpty(confirmation.Title),
                     OkButtonText = confirmation.ConfirmText ?? "Yes",
                     CancelButtonText = confirmation.AbortText ?? "No"
                 }))

@@ -12,8 +12,8 @@
     [Parameter]
     public string Icon { get; set; } = "help";
 
-    [Parameter]
-    public string? HelpText { get; set; }
+    [Parameter, EditorRequired]
+    public string HelpText { get; set; } = "";
 
     [Parameter]
     public TooltipPosition Position { get; set; } = TooltipPosition.Right;

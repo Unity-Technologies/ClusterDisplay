@@ -64,7 +64,13 @@ namespace Unity.ClusterDisplay.MissionControl.EngineeringUI.Dialogs
                 dialogOptions);
         }
 
-        public static async Task<bool> CustomConfirm(this DialogService dialogService, string message, string title, ConfirmOptions confirmOptions)
+        public class CustomConfirmOptions
+        {
+            public string OkButtonText { get; set; } = "OK";
+            public string CancelButtonText { get; set; } = "Cancel";
+        }
+
+        public static async Task<bool> CustomConfirm(this DialogService dialogService, string message, string title, CustomConfirmOptions confirmOptions)
         {
             var parameters = new Dictionary<string, object> { { "Message", message } };
 

@@ -219,10 +219,10 @@ namespace Unity.ClusterDisplay.MissionControl.EngineeringUI.Pages
             // Check we are not overwriting someone else's work.
             if (LaunchConfigurationService.HasMissionControlValueChangedSinceWorkValueModified)
             {
-                var ret = await DialogService.Confirm($"Launch configuration has be modified by an external source " +
+                var ret = await DialogService.CustomConfirm($"Launch configuration has be modified by an external source " +
                     $"since you started working on it.  Do you want to overwrite those changes?",
                     "Overwrite confirmation", new() { OkButtonText = "Yes", CancelButtonText = "No" });
-                if (!ret.HasValue || !ret.Value)
+                if (!ret)
                 {
                     return false;
                 }
@@ -271,7 +271,7 @@ namespace Unity.ClusterDisplay.MissionControl.EngineeringUI.Pages
         async Task ResetToDefault()
         {
             var ret = await DialogService.CustomConfirm("Do you want to reset all parameters to their default values? This cannot be undone.",
-                "Reset all to default", new ConfirmOptions { OkButtonText = "Reset all" });
+                "Reset all to default", new() { OkButtonText = "Reset all" });
 
             if (!ret) return;
 
