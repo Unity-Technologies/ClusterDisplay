@@ -16,6 +16,7 @@ namespace Unity.ClusterDisplay.Graphics
             Overscan,
             Debug,
             TileIndexOverride,
+            PositionNonFullscreenWindows,
             NodeIndexOverride,
             ProjectionSurfaces,
             Keyword,
@@ -29,7 +30,7 @@ namespace Unity.ClusterDisplay.Graphics
             ForceClearHistory
         }
 
-        static string GetName(Field field)
+        public static string GetName(Field field)
         {
             switch (field)
             {
@@ -40,6 +41,7 @@ namespace Unity.ClusterDisplay.Graphics
                 case Field.Overscan: return "Overscan";
                 case Field.Debug: return "Debug Mode";
                 case Field.TileIndexOverride: return "Tile Index Override";
+                case Field.PositionNonFullscreenWindows: return "Position Windows";
                 case Field.NodeIndexOverride: return "Node Index Override";
                 case Field.ProjectionSurfaces: return "Projection Surfaces";
                 case Field.Keyword: return "Keyword";
@@ -56,7 +58,7 @@ namespace Unity.ClusterDisplay.Graphics
             return string.Empty;
         }
 
-        static string GetTooltip(Field field)
+        public static string GetTooltip(Field field)
         {
             switch (field)
             {
@@ -67,6 +69,7 @@ namespace Unity.ClusterDisplay.Graphics
                 case Field.Overscan: return "Amount of overscan in pixels.";
                 case Field.Debug: return "Activate/Deactivate debug mode.";
                 case Field.TileIndexOverride: return "Tile index to be used when there is no cluster network.";
+                case Field.PositionNonFullscreenWindows: return "Position non fullscreen windows to match layout of physical screens represented by windows.";
                 case Field.NodeIndexOverride: return "Node index to be used when there is no cluster network.";
                 case Field.ProjectionSurfaces: return "Collection of surfaces (screens) representing the display cluster.";
                 case Field.Keyword: return "Activate/Deactivate cluster display shading features.";

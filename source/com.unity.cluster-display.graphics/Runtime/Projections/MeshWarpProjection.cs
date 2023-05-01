@@ -238,6 +238,12 @@ namespace Unity.ClusterDisplay.Graphics
 
         public override bool SupportsTestPattern => true;
 
+#if UNITY_EDITOR
+        public event Action<RenderTexture> OnPostRenderRealtimeCubemap;
+        public OuterFrustumMode OuterFrustumModeEditorAccess { get => m_OuterFrustumMode; set => m_OuterFrustumMode = value; }
+        public Cubemap StaticCubeMapEditorAccess { get => m_StaticCubemap; set => m_StaticCubemap = value; }
+#endif
+
         public override void UpdateCluster(ClusterRendererSettings clusterSettings, Camera activeCamera)
         {
             if (m_Meshes.Count == 0)
@@ -267,6 +273,9 @@ namespace Unity.ClusterDisplay.Graphics
                 if (m_OuterFrustumMode == OuterFrustumMode.RealtimeCubemap)
                 {
                     activeCamera.RenderRealtimeCubemap(ref m_OuterFrustumTarget, m_OuterFrustumCubemapSize, cubeMapCenter);
+#if UNITY_EDITOR
+                    OnPostRenderRealtimeCubemap?.Invoke(m_OuterFrustumTarget);
+#endif
                 }
 
                 ConfigureOuterFrustumRendering(cubeMapCenter);

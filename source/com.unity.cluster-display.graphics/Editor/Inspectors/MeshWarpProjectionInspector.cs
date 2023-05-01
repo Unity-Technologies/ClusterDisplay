@@ -1,8 +1,11 @@
 using System;
 using System.Collections.Generic;
+using System.IO;
+using System.Linq;
 using UnityEditor;
 using UnityEditorInternal;
 using UnityEngine;
+using File = UnityEngine.Windows.File;
 
 namespace Unity.ClusterDisplay.Graphics.Editor
 {
@@ -35,10 +38,16 @@ namespace Unity.ClusterDisplay.Graphics.Editor
                 "How the outer frustum region is rendered.");
             public static readonly GUIContent BackgroundColor = EditorGUIUtility.TrTextContent("Background Color");
             public static readonly GUIContent StaticCubemap = EditorGUIUtility.TrTextContent("Cubemap");
+            public static readonly GUIContent StaticCubemapSnapshot = EditorGUIUtility.TrTextContent(
+                "Generate Static Cubemap",
+                "Take a snapshot of the realtime cubemap, save it as an asset and use it as the static cubemap");
             public static readonly GUIContent OuterViewPosition = EditorGUIUtility.TrTextContent("Outer View Origin",
                 "The position, specified locally, from which to render the outer frustum cubemap.");
             public static readonly GUIContent CubemapSize = EditorGUIUtility.TrTextContent("Cubemap Size",
                 "Size of the cubemap in pixels");
+            public static readonly int[] CubemapSizes = new[] {1, 2, 4, 8, 16, 32, 64, 128, 256, 512, 1024, 2048, 4096};
+            public static readonly GUIContent[] CubemapSizesGUI =
+                CubemapSizes.Select(s => new GUIContent(s.ToString())).ToArray();
             public const string UndoCreateSurface = "Create projection surface";
             public static readonly GUIContent RotateUVs = EditorGUIUtility.TrTextContent("Rotate mesh UVs");
         }
@@ -187,10 +196,22 @@ namespace Unity.ClusterDisplay.Graphics.Editor
                         break;
                     case MeshWarpProjection.OuterFrustumMode.StaticCubemap:
                         EditorGUILayout.PropertyField(m_StaticCubemapProp, Contents.StaticCubemap);
+                        if (GUILayout.Button(Contents.StaticCubemapSnapshot))
+                        {
+                            m_Projection.OnPostRenderRealtimeCubemap += PostRealtimeCubemapRender;
+                            m_Projection.OuterFrustumModeEditorAccess =
+                                MeshWarpProjection.OuterFrustumMode.RealtimeCubemap;
+
+                            // The two lines below is to be sure that something will draw the scene.  The easiest way
+                            // is to make the scene view visible and force a repaint.
+                            EditorWindow.GetWindow(typeof(SceneView));
+                            SceneView.RepaintAll();
+                        }
                         break;
                     case MeshWarpProjection.OuterFrustumMode.RealtimeCubemap:
                         EditorGUILayout.PropertyField(m_OuterViewPositionProp, Contents.OuterViewPosition);
-                        EditorGUILayout.PropertyField(m_CubemapSizeProp, Contents.CubemapSize);
+                        m_CubemapSizeProp.intValue = EditorGUILayout.IntPopup(Contents.CubemapSize,
+                            m_CubemapSizeProp.intValue, Contents.CubemapSizesGUI, Contents.CubemapSizes);
                         break;
                     default:
                         throw new ArgumentOutOfRangeException();
@@ -202,6 +223,30 @@ namespace Unity.ClusterDisplay.Graphics.Editor
             m_SurfacesList.DoLayoutList();
 
             serializedObject.ApplyModifiedProperties();
+        }
+
+        void PostRealtimeCubemapRender(RenderTexture cubemap)
+        {
+            // Unhook this callback (we only want it to be called once)
+            m_Projection.OuterFrustumModeEditorAccess = MeshWarpProjection.OuterFrustumMode.StaticCubemap;
+            m_Projection.OnPostRenderRealtimeCubemap -= PostRealtimeCubemapRender;
+
+            // Create the cubemap asset
+            var cubemapAsset = GraphicsUtil.RenderTextureCubemapToCubemap(cubemap);
+            string snapshotFolder = "MeshWarpStaticCubemap";
+            if (!AssetDatabase.IsValidFolder($"Assets/{snapshotFolder}"))
+            {
+                AssetDatabase.CreateFolder("Assets", snapshotFolder);
+            }
+            var assetPath = AssetDatabase.GenerateUniqueAssetPath($"Assets/{snapshotFolder}/snapshot.asset");
+            AssetDatabase.CreateAsset(cubemapAsset, assetPath);
+            AssetDatabase.SaveAssets();
+
+            // Set the projection properties
+            Undo.RecordObject(m_Projection, "Snapshot Realtime Cubemap");
+            m_Projection.StaticCubeMapEditorAccess = cubemapAsset;
+
+            Undo.SetCurrentGroupName("Take snapshot of realtime cubemap");
         }
     }
 }

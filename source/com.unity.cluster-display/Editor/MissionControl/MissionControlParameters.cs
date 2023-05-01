@@ -53,7 +53,7 @@ namespace Unity.ClusterDisplay
         /// <summary>
         /// Does the contain contain anything.
         /// </summary>
-        public bool Any => GlobalParameters.Any() && LaunchComplexParameters.Any() && LaunchPadParameters.Any();
+        public bool Any => GlobalParameters.Any() || LaunchComplexParameters.Any() || LaunchPadParameters.Any();
 
         /// <summary>
         /// Method called at the start of the build process to clear any parameters added during the previous build.

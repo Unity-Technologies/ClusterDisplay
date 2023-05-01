@@ -89,6 +89,15 @@ namespace Unity.ClusterDisplay.Graphics
             AddVector2IntParameter(MissionControlParameters.Instance.GlobalParameters, "Bezel",
                 TiledProjection.BezelParameterId, "Physical width of display bezels.",
                 "Physical height of display bezels.");
+            MissionControlParameters.Instance.GlobalParameters.Add(new()
+            {
+                Name = Labels.GetName(Labels.Field.PositionNonFullscreenWindows),
+                Id = TiledProjection.PositionWindowsParameterId,
+                Description = Labels.GetTooltip(Labels.Field.PositionNonFullscreenWindows),
+                Type = LaunchParameterType.Boolean,
+                DefaultValue = false
+            });
+            return ret;
         }
 
         /// <summary>
