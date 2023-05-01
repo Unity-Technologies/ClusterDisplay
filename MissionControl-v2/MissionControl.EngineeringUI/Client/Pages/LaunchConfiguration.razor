@@ -50,7 +50,7 @@
 
 <RadzenText Text="Launch Complexes Configuration" Class="data-grid-header height-56 rz-border-base-300" TextStyle="TextStyle.DisplayH6" />
 <RadzenDataGrid @ref="m_ComplexesGrid" Data=@Complexes.Collection.Values
-                SelectionMode="DataGridSelectionMode.Single" @bind-Value=@m_SelectedLaunchComplexes>
+                SelectionMode="DataGridSelectionMode.Single">
     <Columns>
         <RadzenDataGridColumn TItem="LaunchComplex" Title="Name" Property="Name" />
         <RadzenDataGridColumn TItem="LaunchComplex" Title="Active Launchpads">

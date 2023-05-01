@@ -1,7 +1,6 @@
 using Microsoft.AspNetCore.Components;
 using Radzen;
 using Radzen.Blazor;
-using System.Numerics;
 using Unity.ClusterDisplay.MissionControl.EngineeringUI.Dialogs;
 using Unity.ClusterDisplay.MissionControl.EngineeringUI.Services;
 using Unity.ClusterDisplay.MissionControl.MissionControl;
@@ -52,9 +51,6 @@ namespace Unity.ClusterDisplay.MissionControl.EngineeringUI.Pages
             Missions.Collection.SomethingChanged += MissionsChanged;
             UpdateAssetsUseCount();
         }
-
-        IList<Asset>? m_SelectedAsset;
-        Asset? SelectedAsset => m_SelectedAsset?.FirstOrDefault();
 
         Dictionary<Guid, int> AssetsUsageCount { get; }= new();
 
@@ -107,7 +103,6 @@ namespace Unity.ClusterDisplay.MissionControl.EngineeringUI.Pages
         {
             if (m_ToSelect != Guid.Empty && AssetsService.Collection.TryGetValue(m_ToSelect, out var asset))
             {
-                m_SelectedAsset = new List<Asset>{ asset };
                 m_ToSelect = Guid.Empty;
             }
             StateHasChanged();

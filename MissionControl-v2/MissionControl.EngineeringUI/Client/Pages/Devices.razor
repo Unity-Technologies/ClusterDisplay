@@ -6,7 +6,7 @@
 <RadzenStack Orientation="Orientation.Horizontal" JustifyContent="JustifyContent.SpaceBetween" AlignItems="AlignItems.Center" class="page-title-row">
     <RadzenText Text="Devices" TextStyle="TextStyle.H4" />
     <RadzenStack Orientation="Orientation.Horizontal">
-        <RadzenButton Click=@DeleteSelectedLaunchComplex Text="Delete" Icon="delete" ButtonStyle="ButtonStyle.Light"
+        <RadzenButton Click=@DeleteSelectedLaunchComplexes Text="Delete" Icon="delete" ButtonStyle="ButtonStyle.Light"
                       Disabled=@(!HasSelection || MissionControlStatus.State is MissionControl.State.Launched) />
         <RadzenButton Click=@AddLaunchComplex Text="Add New" Icon="add_circle_outline" ButtonStyle="ButtonStyle.Info" />
     </RadzenStack>

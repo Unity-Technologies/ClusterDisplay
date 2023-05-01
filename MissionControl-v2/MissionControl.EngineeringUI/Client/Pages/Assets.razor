@@ -34,7 +34,7 @@
                 <span>@((asset.StorageSize / (1024 * 1024.0)).ToString("N2") + " MB")</span>
             </Template>
         </RadzenDataGridColumn>
-        <RadzenDataGridColumn TItem="Asset" Title="Reference count">
+        <RadzenDataGridColumn TItem="Asset" Title="Reference count" Sortable="false">
             <Template Context="asset">
                 <span>@(AssetsUsageCount.TryGetValue(asset.Id, out var count) ? count : 0)</span>
             </Template>

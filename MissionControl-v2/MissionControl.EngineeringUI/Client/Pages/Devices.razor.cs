@@ -73,7 +73,7 @@ namespace Unity.ClusterDisplay.MissionControl.EngineeringUI.Pages
             NotificationService.Notify(severity: NotificationSeverity.Info, summary: $"Node \"{launchComplex.Name}\" was deleted.");
         }
 
-        protected async Task DeleteSelectedLaunchComplex()
+        protected async Task DeleteSelectedLaunchComplexes()
         {
             if (!HasSelection) return;
             string names = String.Join(", ", m_SelectedComplexes.Select(i => $"\"{i.Name}\"") ?? Enumerable.Empty<string>());

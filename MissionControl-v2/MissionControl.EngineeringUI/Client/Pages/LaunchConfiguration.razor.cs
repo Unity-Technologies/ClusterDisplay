@@ -75,7 +75,6 @@ namespace Unity.ClusterDisplay.MissionControl.EngineeringUI.Pages
 
         RadzenDataGrid<LaunchComplex> m_ComplexesGrid = default!;
         RadzenDropDownDataGrid<Guid>? m_AssetsDropDown;
-        IList<LaunchComplex>? m_SelectedLaunchComplexes;
 
         void GatherLaunchParameters()
         {

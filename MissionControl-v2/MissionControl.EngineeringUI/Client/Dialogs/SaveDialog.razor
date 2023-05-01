@@ -1,45 +1,30 @@
 @using Unity.ClusterDisplay.MissionControl.MissionControl;
 
-<RadzenTemplateForm TItem="SaveMissionCommand" Data=@Command Submit=@OnOk>
-    <div class="row" style="height: 100%; overflow-y: auto;">
-        <div>
-            <!-- To avoid stretching every row of the fixed height container above -->
+<RadzenTemplateForm TItem="SaveMissionCommand" Data=@Command Submit=@OnOk Style="height: 100%">
+    <RadzenStack Orientation="Orientation.Vertical" JustifyContent="JustifyContent.SpaceBetween" Style="height: 100%">
+        <RadzenStack Orientation="Orientation.Vertical">
             @if (Overwritables.Any())
             {
-                <div class="row mb-1">
-                    <div class="col-3 align-items-center d-flex">
-                        <RadzenLabel Text="Snapshot" />
-                    </div>
-                    <div class="col-9 rz-mb-3">
-                        <RadzenDropDown Name="Snapshot" @bind-Value=@m_SelectedForOverwrite
+                <RadzenLabel Text="Snapshot" />
+                <RadzenDropDownDataGrid Name="Snapshot" @bind-Value=@m_SelectedForOverwrite
                                     Data="@Overwritables" TextProperty="Description.Name"
-                                    Change="@(args => OverwriteSelectionChanged())"/>
-                    </div>
-                </div>
+                                    FilterCaseSensitivity="FilterCaseSensitivity.CaseInsensitive"
+                                    Change="@(args => OverwriteSelectionChanged())">
+                    <Columns>
+                        <RadzenDropDownDataGridColumn Property="Description.Name" Title="Snapshot" />
+                    </Columns>
+                </RadzenDropDownDataGrid>
             }
-            <div class="row mb-1">
-                <div class="col-3 align-items-center d-flex">
-                    <RadzenLabel Text="Name" />
-                </div>
-                <div class="col-9 rz-mb-3">
-                    <RadzenTextBox Name="MissionName" @bind-Value=@Command.Description.Name />
-                    <RadzenRequiredValidator Component="MissionName" Text="Name is required" />
-                </div>
-            </div>
-            <div class="row my-1">
-                <div class="col-3 align-items-center d-flex">
-                    <RadzenLabel Text="Description" />
-                </div>
-                <div class="col-9 rz-mb-3">
-                    <RadzenTextArea style="margin-bottom: -7px;width:calc(100% - 1.99rem);" @bind-Value=@Command.Description.Details />
-                </div>
-            </div>
-        </div>
-    </div>
-    <div class="row mt-1">
-        <div class="col-12 text-end">
+            <RadzenLabel Text="Name" />
+            <RadzenTextBox Name="MissionName" @bind-Value=@Command.Description.Name />
+            <RadzenRequiredValidator Component="MissionName" Text="Name is required" />
+            <RadzenLabel Text="Description" />
+            <RadzenTextArea @bind-Value=@Command.Description.Details />
+
+        </RadzenStack>
+        <RadzenStack Orientation="Orientation.Horizontal" JustifyContent="JustifyContent.End" class="text-end">
             <RadzenButton Text="Cancel" Click=OnCancel ButtonStyle="ButtonStyle.Light" Style="width: 120px" />
-            <RadzenButton Text="@SaveButtonText" ButtonType="ButtonType.Submit" ButtonStyle="ButtonStyle.Info" Style="width: 120px; margin-left:24px" Class="me-1" />
-        </div>
-    </div>
+            <RadzenButton Text="@SaveButtonText" ButtonType="ButtonType.Submit" ButtonStyle="ButtonStyle.Info" Style="width: 120px" Class="me-1" />
+        </RadzenStack>
+    </RadzenStack>
 </RadzenTemplateForm>
