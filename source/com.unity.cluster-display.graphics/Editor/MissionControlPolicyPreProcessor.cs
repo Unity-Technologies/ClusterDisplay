@@ -97,7 +97,6 @@ namespace Unity.ClusterDisplay.Graphics
                 Type = LaunchParameterType.Boolean,
                 DefaultValue = false
             });
-            return ret;
         }
 
         /// <summary>
