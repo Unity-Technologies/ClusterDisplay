@@ -86,14 +86,13 @@ namespace Unity.ClusterDisplay
         bool ProcessTopologyChanges()
         {
             if (UpdatedClusterTopology.Entries != null &&
-                (!m_LastAnalyzedTopology.TryGetTarget(out var lastAnalyzedTopology) ||
-                    !ReferenceEquals(lastAnalyzedTopology, UpdatedClusterTopology.Entries)))
+                !ReferenceEquals(m_LastAnalyzedTopology, UpdatedClusterTopology.Entries))
             {
                 if (!HandleChangesInNodeAssignment(UpdatedClusterTopology.Entries))
                 {
                     return false;
                 }
-                m_LastAnalyzedTopology.SetTarget(UpdatedClusterTopology.Entries);
+                m_LastAnalyzedTopology = UpdatedClusterTopology.Entries;
             }
 
             return true;
@@ -174,7 +173,7 @@ namespace Unity.ClusterDisplay
         /// <summary>
         /// Last analyzed topology change.
         /// </summary>
-        WeakReference<IReadOnlyList<ClusterTopologyEntry>> m_LastAnalyzedTopology = new(null);
+        IReadOnlyList<ClusterTopologyEntry> m_LastAnalyzedTopology;
 
         /// <summary>
         /// Object created when a change from <see cref="NodeRole.Backup"/> to <see cref="NodeRole.Emitter"/> is

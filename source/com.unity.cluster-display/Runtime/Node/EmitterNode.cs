@@ -113,7 +113,7 @@ namespace Unity.ClusterDisplay
         /// collection allow skipping greeting of repeaters nodes (since the <see cref="EmitterNode"/> we are replacing
         /// already did it before us and the survey responses contains all the information we need).
         /// </summary>
-        public IReadOnlyCollection<RepeatersSurveyAnswer> RepeatersSurveyResult;
+        public IReadOnlyCollection<RepeatersSurveyAnswer> RepeatersSurveyResult { get; set; }
     }
 
     /// <summary>
