@@ -68,11 +68,12 @@ namespace Unity.ClusterDisplay.MissionControl.EngineeringUI.Dialogs
         {
             public string OkButtonText { get; set; } = "OK";
             public string CancelButtonText { get; set; } = "Cancel";
+            public string? Prompt { get; set; }
         }
 
         public static async Task<bool> CustomConfirm(this DialogService dialogService, string message, string title, CustomConfirmOptions confirmOptions)
         {
-            var parameters = new Dictionary<string, object> { { "Message", message } };
+            var parameters = new Dictionary<string, object?> { { "Message", message } };
 
             if (confirmOptions.OkButtonText != null)
             {
@@ -82,6 +83,7 @@ namespace Unity.ClusterDisplay.MissionControl.EngineeringUI.Dialogs
             {
                 parameters["CancelText"] = confirmOptions.CancelButtonText;
             }
+            parameters["Prompt"] = confirmOptions.Prompt;
 
             var result = await dialogService.OpenAsync<ConfirmationDialog>(title, parameters);
             // Result could be null if user clicks the close button. Treat it as "cancel" (false).

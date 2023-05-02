@@ -23,7 +23,7 @@
                                 Change=@SelectAllOrNone />
             </HeaderTemplate>
             <Template Context="launchComplex">
-                <RadzenCheckBox TriState="false" Value="@(m_SelectedComplexes.Contains(launchComplex))"
+                <RadzenCheckBox TriState="false" Value="@(m_SelectedComplexes?.Contains(launchComplex) ?? false)"
                                 TValue="bool" Change=@(args => m_ComplexesGrid.SelectRow(launchComplex)) />
             </Template>
         </RadzenDataGridColumn>

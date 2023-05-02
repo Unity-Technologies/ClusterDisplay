@@ -30,7 +30,7 @@ namespace Unity.ClusterDisplay.MissionControl.EngineeringUI.Services
         /// <summary>
         /// Collection mirroring all the <see cref="LaunchComplex"/>es in MissionControl.
         /// </summary>
-        public IReadOnlyIncrementalCollection<LaunchComplex> Collection => _complexes;
+        public IReadOnlyIncrementalCollection<LaunchComplex> Collection => m_Complexes;
 
         /// <summary>
         /// Put (create a new or update an already existing) <see cref="LaunchComplex"/> in MissionControl.
@@ -49,7 +49,7 @@ namespace Unity.ClusterDisplay.MissionControl.EngineeringUI.Services
         /// <param name="id">Identifier of the <see cref="LaunchComplex"/> to delete.</param>
         /// <remarks>We do not update <see cref="Collection"/> immediately, we wait for the update from MissionControl
         /// the same way as we would receive updates if it was done by some other device.</remarks>
-        public Task DeleteAsync(Guid id)
+        public Task<HttpResponseMessage> DeleteAsync(Guid id)
         {
             return m_HttpClient.DeleteAsync($"complexes/{id}");
         }
@@ -61,7 +61,7 @@ namespace Unity.ClusterDisplay.MissionControl.EngineeringUI.Services
             {
                 return 0;
             }
-            _complexes.ApplyDelta(deserializeRet);
+            m_Complexes.ApplyDelta(deserializeRet);
             return deserializeRet.NextUpdate;
         }
 
@@ -70,6 +70,6 @@ namespace Unity.ClusterDisplay.MissionControl.EngineeringUI.Services
         /// <summary>
         /// The collection mirroring all the <see cref="LaunchComplex"/>es in MissionControl.
         /// </summary>
-        IncrementalCollection<LaunchComplex> _complexes = new();
+        IncrementalCollection<LaunchComplex> m_Complexes = new();
     }
 }
