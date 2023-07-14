@@ -15,5 +15,12 @@
   },
   "dependencies": {
     "com.unity.cluster-display": "0.0.3-preview"
-  }
+  },
+  "samples": [
+    {
+      "displayName": "Spinning Cube",
+      "path": "Samples~/SpinningCube",
+      "description": "A simple demonstration of cluster rendering. Requires URP and the 'com.unity.inputsystem' package to be installed."
+    }
+  ]
 }

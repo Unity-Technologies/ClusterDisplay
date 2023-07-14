@@ -27,6 +27,6 @@ MonoBehaviour:
     HeadlessEmitter: 0
     ReplaceHeadlessEmitter: 0
     InputSync: 1
-    Fence: 1
+    Fence: 0
     m_HandshakeTimeoutSec: 10
     m_CommTimeoutSec: 5
