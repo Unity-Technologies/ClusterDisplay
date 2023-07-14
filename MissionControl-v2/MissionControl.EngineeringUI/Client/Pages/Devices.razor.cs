@@ -3,20 +3,37 @@ using Radzen;
 using Radzen.Blazor;
 using Unity.ClusterDisplay.MissionControl.EngineeringUI.Services;
 using Unity.ClusterDisplay.MissionControl.MissionControl;
+using static Unity.ClusterDisplay.MissionControl.EngineeringUI.Dialogs.DialogExtensions;
 
 namespace Unity.ClusterDisplay.MissionControl.EngineeringUI.Pages
 {
-    // ReSharper disable once ClassNeverInstantiated.Global -> Instantiated through routing
-    public partial class Devices: IDisposable
+    public partial class Devices : IDisposable
     {
         [Inject]
         ComplexesService Complexes { get; set; } = default!;
         [Inject]
         DialogService DialogService { get; set; } = default!;
+        [Inject]
+        NotificationService NotificationService { get; set; } = default!;
 
-        public void Dispose()
+        [Inject]
+        MissionControlStatusService MissionControlStatus { get; set; } = default!;
+        protected RadzenDataGrid<LaunchComplex> m_ComplexesGrid = default!;
+
+        IList<LaunchComplex>? m_SelectedComplexes = new List<LaunchComplex>();
+
+        bool HasSelection => m_SelectedComplexes is { } selected && Complexes.Collection.Values.Any(i => selected.Contains(i));
+
+        void SelectAllOrNone(bool all)
         {
-            Complexes.Collection.SomethingChanged -= ComplexesChanged;
+            if (all)
+            {
+                m_SelectedComplexes = Complexes.Collection.Values.ToList();
+            }
+            else
+            {
+                m_SelectedComplexes = null;
+            }
         }
 
         protected override void OnInitialized()
@@ -24,48 +41,89 @@ namespace Unity.ClusterDisplay.MissionControl.EngineeringUI.Pages
             Complexes.Collection.SomethingChanged += ComplexesChanged;
         }
 
-        IList<LaunchComplex>? m_SelectedLaunchComplexes;
-        LaunchComplex? SelectedLaunchComplexes => m_SelectedLaunchComplexes?.FirstOrDefault();
-
-        RadzenDataGrid<LaunchComplex> m_ComplexesGrid = default!;
-
-        async Task AddLaunchComplex()
+        protected async Task AddLaunchComplex()
         {
             await DialogService.OpenAsync<Dialogs.EditLaunchComplex>($"Add a new Launch Complex",
                new Dictionary<string, object>(),
-               new DialogOptions() { Width = "60%", Height = "60%", Resizable = true, Draggable = true });
+               new DialogOptions() { Width = "60%", Height = "80%", Resizable = true, Draggable = true });
         }
 
-        async Task EditLaunchComplex()
+        protected async Task EditLaunchComplex(LaunchComplex launchComplex)
         {
-            var selected = SelectedLaunchComplexes;
-            if (selected == null)
+            var ret = await DialogService.OpenAsync<Dialogs.EditLaunchComplex>($"Edit {launchComplex.Name}",
+               new Dictionary<string, object>() { { "ToEdit", launchComplex.DeepClone() } },
+               new DialogOptions() { Width = "60%", Height = "80%", Resizable = true, Draggable = true });
+            if (ret != null)
             {
-                return;
+                NotificationService.Notify(NotificationSeverity.Info, $"{launchComplex.Name} updated");
             }
-
-            await DialogService.OpenAsync<Dialogs.EditLaunchComplex>($"Edit {selected.Name}",
-               new Dictionary<string, object>() { { "ToEdit", selected.DeepClone() } },
-               new DialogOptions() { Width = "60%", Height = "60%", Resizable = true, Draggable = true });
-
         }
 
-        async Task DeleteLaunchComplex()
+        protected async Task DeleteLaunchComplex(LaunchComplex launchComplex)
         {
-            var selected = SelectedLaunchComplexes;
-            if (selected == null)
+            var ret = await DialogService.CustomConfirm($"Do you want to delete \"{launchComplex.Name}\"?",
+                "Confirm deletion", new() { OkButtonText = "Delete", CancelButtonText = "Cancel" });
+            if (!ret)
             {
                 return;
             }
 
-            var ret = await DialogService.Confirm($"Do you want to delete \"{selected.Name}\"?",
-                "Confirm deletion", new () { OkButtonText = "Yes", CancelButtonText = "No" });
-            if (!ret.HasValue || !ret.Value)
+            try
+            {
+                var response = await Complexes.DeleteAsync(launchComplex.Id);
+                if (response.IsSuccessStatusCode)
+                {
+                    SelectAllOrNone(all: false);
+                    NotificationService.Notify(severity: NotificationSeverity.Info, summary: $"Complex \"{launchComplex.Name}\" was deleted.");
+                }
+                else
+                {
+                    NotificationService.Notify(severity: NotificationSeverity.Error, summary: $"Could not delete complex \"{launchComplex.Name}\"");
+                }
+            }
+            catch (Exception ex)
+            {
+                NotificationService.Notify(severity: NotificationSeverity.Error, summary: $"Error deleting complex: {ex.Message}");
+            }
+        }
+
+        protected async Task DeleteSelectedLaunchComplexes()
+        {
+            if (!HasSelection) return;
+            string names = String.Join(", ", m_SelectedComplexes!.Select(i => $"\"{i.Name}\"") ?? Enumerable.Empty<string>());
+
+            var ret = await DialogService.CustomConfirm($"Do you want to delete {names}?", "Confirm deletion",
+                new() { OkButtonText = "Delete", CancelButtonText = "Cancel", Prompt = "delete" });
+            if (!ret)
             {
                 return;
             }
 
-            await Complexes.DeleteAsync(selected.Id);
+            try
+            {
+                var results = await Task.WhenAll(m_SelectedComplexes!.Select(async i => (i.Name, response: await Complexes.DeleteAsync(i.Id))));
+                foreach (var result in results)
+                {
+                    if (result.response.IsSuccessStatusCode)
+                    {
+                        NotificationService.Notify(severity: NotificationSeverity.Info, summary: $"Deleted complex \"{result.Name}\"");
+                    }
+                    else
+                    {
+                        NotificationService.Notify(severity: NotificationSeverity.Info, summary: $"Could not delete complex \"{result.Name}\"");
+                    }
+                }
+                SelectAllOrNone(all: false);
+            }
+            catch (Exception ex)
+            {
+                NotificationService.Notify(severity: NotificationSeverity.Error, summary: $"Error deleting complexes: {ex.Message}");
+            }
+        }
+
+        public void Dispose()
+        {
+            Complexes.Collection.SomethingChanged -= ComplexesChanged;
         }
 
         void ComplexesChanged(IReadOnlyIncrementalCollection obj)

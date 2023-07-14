@@ -1,0 +1,19 @@
+@using Unity.ClusterDisplay.MissionControl.MissionControl
+@using Unity.ClusterDisplay.MissionControl.EngineeringUI.Services
+
+@foreach (var entry in DynamicEntries)
+{
+    <RadzenRow>
+        <RadzenColumn Size="3">
+            <RadzenLabel Text="@entry.Name" Style="font-weight: bold"/>
+        </RadzenColumn>
+        <RadzenColumn>
+            <RadzenLabel Text=@entry.Value.ToString() />
+        </RadzenColumn>
+    </RadzenRow>
+}
+
+@code {
+    [Parameter, EditorRequired]
+    public IEnumerable<LaunchPadReportDynamicEntry> DynamicEntries { get; set; } = null!;
+}

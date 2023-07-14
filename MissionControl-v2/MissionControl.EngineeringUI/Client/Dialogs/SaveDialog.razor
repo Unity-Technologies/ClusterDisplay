@@ -1,31 +1,30 @@
 @using Unity.ClusterDisplay.MissionControl.MissionControl;
 
-<RadzenTemplateForm TItem="SaveMissionCommand" Data=@Command Submit=@OnOk Style="height: 100%;">
-    <div class="row" style="height: calc(100% - 40px); overflow-y: auto;">
-        <div> <!-- To avoid stretching every row of the fixed height container above -->
-            <div class="row mb-1">
-                <div class="col-3 align-items-center d-flex">
-                    <RadzenLabel Text="Name" />
-                </div>
-                <div class="col-9">
-                    <RadzenTextBox Name="MissionName" style="width: 100%;" @bind-Value=@Command.Description.Name />
-                    <RadzenRequiredValidator Component="MissionName" Text="Name is required" />
-                </div>
-            </div>
-            <div class="row my-1">
-                <div class="col-3 align-items-center d-flex">
-                    <RadzenLabel Text="Description" />
-                </div>
-                <div class="col-9">
-                    <RadzenTextArea style="width: 100%; margin-bottom: -7px;" @bind-Value=@Command.Description.Details />
-                </div>
-            </div>
-        </div>
-    </div>
-    <div class="row mt-1">
-        <div class="col-12 text-end">
-            <RadzenButton Text="Save" ButtonType="ButtonType.Submit" Style="width: 120px" Class="me-1" />
+<RadzenTemplateForm TItem="SaveMissionCommand" Data=@Command Submit=@OnOk Style="height: 100%">
+    <RadzenStack Orientation="Orientation.Vertical" JustifyContent="JustifyContent.SpaceBetween" Style="height: 100%">
+        <RadzenStack Orientation="Orientation.Vertical">
+            @if (Overwritables.Any())
+            {
+                <RadzenLabel Text="Snapshot" />
+                <RadzenDropDownDataGrid Name="Snapshot" @bind-Value=@m_SelectedForOverwrite
+                                    Data="@Overwritables" TextProperty="Description.Name"
+                                    FilterCaseSensitivity="FilterCaseSensitivity.CaseInsensitive"
+                                    Change="@(args => OverwriteSelectionChanged())">
+                    <Columns>
+                        <RadzenDropDownDataGridColumn Property="Description.Name" Title="Snapshot" />
+                    </Columns>
+                </RadzenDropDownDataGrid>
+            }
+            <RadzenLabel Text="Name" />
+            <RadzenTextBox Name="MissionName" @bind-Value=@Command.Description.Name />
+            <RadzenRequiredValidator Component="MissionName" Text="Name is required" />
+            <RadzenLabel Text="Description" />
+            <RadzenTextArea @bind-Value=@Command.Description.Details />
+
+        </RadzenStack>
+        <RadzenStack Orientation="Orientation.Horizontal" JustifyContent="JustifyContent.End" class="text-end">
             <RadzenButton Text="Cancel" Click=OnCancel ButtonStyle="ButtonStyle.Light" Style="width: 120px" />
-        </div>
-    </div>
+            <RadzenButton Text="@SaveButtonText" ButtonType="ButtonType.Submit" ButtonStyle="ButtonStyle.Info" Style="width: 120px" Class="me-1" />
+        </RadzenStack>
+    </RadzenStack>
 </RadzenTemplateForm>

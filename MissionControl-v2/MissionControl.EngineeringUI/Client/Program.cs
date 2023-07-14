@@ -13,6 +13,7 @@ builder.Services.AddHttpClient();
 
 builder.Services.AddScoped<ContextMenuService>();
 builder.Services.AddScoped<DialogService>();
+builder.Services.AddScoped<NotificationService>();
 builder.Services.AddScoped<ContextMenuService>();
 builder.Services.AddScoped<TooltipService>();
 

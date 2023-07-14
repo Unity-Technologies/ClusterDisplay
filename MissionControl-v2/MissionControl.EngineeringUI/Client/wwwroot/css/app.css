@@ -1,15 +1,39 @@
 @import url('open-iconic/font/css/open-iconic-bootstrap.min.css');
 
+/************************* mixins*************************/
+:root {
+    /* color palette */
+    --first-color: #16f;
+    --second-color: #ff7;
+    --sidebar-bg-color: #141414;
+    --sidebar-bg-hover: rgba(20,20,20,0.4);
+    /* heights */
+    --sidebar-width: 208px;
+    --sidebar-collapsed-width: 56px;
+    --icon-font-size: 20px;
+    --slider-range-color: #2196F3;
+    --slider-handle-color: #2196F3;
+    --switch-checked-color: #2196F3;
+    --warning-text-color: #D98616;
+    --error-text-color: #D30E08;
+}
+
+/************************* Site wide definitions *************************/
+/*Change from `box-sizing: content-box` so that `width` is not affected by `padding` or `border`.*/
+*,
+*::before,
+*::after {
+    box-sizing: border-box;
+}
+
 html, body {
-    font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+    font-family: 'Inter', Helvetica Neue, Helvetica, Arial, sans-serif;
+    background-color: var(--rz-base-100);
+    margin: 0px;
 }
 
 h1:focus {
     outline: none;
-}
-
-a, .btn-link {
-    color: #0071c1;
 }
 
 .btn-primary {
@@ -18,14 +42,19 @@ a, .btn-link {
     border-color: #1861ac;
 }
 
-.content {
-    padding-top: 1.1rem;
-}
-
 .validation-message {
     color: red;
 }
 
+.w-100 {
+     width: 100% !important; 
+}
+
+.h-100 {
+    height: 100% !important;
+}
+
+/************************* Blazor specific DIV *************************/
 #blazor-error-ui {
     background: lightyellow;
     bottom: 0;
@@ -55,6 +84,354 @@ a, .btn-link {
         content: "An error has occurred."
     }
 
+
+/************************* override radzen styles *************************/
+
+/* Navigations */
+.rz-sidebar {
+    background-color: var(--sidebar-bg-color);
+    max-width: var(--sidebar-width);
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    align-items: stretch;
+    align-content: flex-start;
+}
+
+.rz-sidebar-collapsed {
+    width: var(--sidebar-collapsed-width) !important;
+    opacity: 1.0;
+}
+
+.rz-sidebar-collapsed .rz-navigation-item-text {
+    width: 0;
+    opacity: 0;
+}
+
+.rz-navigation-item {
+    background-color: var(--sidebar-bg-color);
+    color: white;
+    border-style: none;
+    border-bottom-width: 0px !important;
+}
+
+.rz-panel-menu {
+    background-color: var(--sidebar-bg-color);
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    margin: 8px;
+}
+
+.rz-navigation-item-wrapper-active .rz-navigation-item-icon {
+    color: white !important;
+}
+
+.rz-navigation-item-wrapper-active:hover .rz-navigation-item-icon {
+    color: white !important;
+}
+
+.rz-navigation-item-wrapper:hover {
+    background-color: var(--rz-base-900) !important;
+    color: white !important;
+}
+
+.rz-navigation-item-wrapper {
+    border-radius: 8px;
+    border: 1px solid var(--sidebar-bg-color);
+}
+
+.rz-navigation-item-wrapper-active {
+    color: white !important;
+    background-color: var(--rz-base-800) !important;
+    border: 1px solid var(--rz-base-600);
+    border-radius: 8px;
+}
+
+    .rz-navigation-item-wrapper-active:hover {
+        background-color: var(--rz-base-700);
+    }
+
+    .rz-navigation-item-wrapper-active:hover .rz-navigation-item-text{
+        color: var(--rz-base-900);
+    }
+
+    .rz-navigation-item-wrapper:hover .rz-navigation-item-text {
+        color: white;
+    }
+
+.rz-navigation-item-wrapper:hover .rz-navigation-item-icon {
+    color: white !important;
+}
+
+.rz-panel-menu .rz-navigation-item-link {
+    border: 1px solid var(--sidebar-bg-color);
+    border: 1px none;
+    border-radius: 8px;
+    padding: 8px;
+}
+
+.rz-navigation-item-link:hover {
+    color: aliceblue !important;
+}
+
+.rz-state-highlight {
+    background-color: var(--rz-base-200);
+}
+
+.rz-column-title-content {
+    font-size: 12px;
+    color: var(--rz-base-600);
+    font-weight: 600;
+}
+
+/* radzen Default content */
+.content-container {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    padding-top: 16px;
+    padding-bottom: 16px;
+    padding-right: 12px;
+}
+
+.rz-data-row {
+    background-color: var(--rz-base-200);
+}
+
+.rz-header {
+    background-color: var(--rz-white);
+    color: var(--rz-base-900);
+    padding: 0px 32px 0px 32px;
+    height: 56px;
+    display: flex;
+    justify-content: end;
+    align-items: center;
+}
+
+.rz-header button {
+    margin-left: auto;
+}
+
+/* radzen Dialog */
+.rz-dialog-titlebar {
+    border-bottom: 1px solid var(--rz-base-300);
+    padding-bottom: 24px;
+}
+
 .rz-dialog-content {
-    height: 100%;
+    height:100%;
+}
+
+.rz-dialog-actions {
+    padding-top: 24px;
+    padding-bottom: 16px;
+    border-top: 1px solid var(--rz-base-300);
+}
+
+.rz-dialog .text-end {
+    border-top: 1px solid var(--rz-base-300);
+    padding-top: 12px;
+}
+
+/* Widgets */
+.rz-slider-range {
+    background-color: var(--slider-range-color);
+}
+
+.rz-slider-handle {
+    background-color: var(--slider-handle-color);
+}
+
+.rz-switch.rz-switch-checked .rz-switch-circle:before {
+    background: var(--switch-checked-color);
+}
+
+/* ************************ Custom component ************************ */
+/* non-specific definitions */
+
+.height-56 {
+    height: 56px;
+}
+
+.align-flex-right {
+    display:flex;
+    justify-content:flex-end;
+}
+
+.align-flex-row {
+    width: 100%;
+    display: flex !important;
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: center;
+}
+
+    .align-flex-row h6 {
+        margin: 0px;
+    }
+
+/* sidebar containing the mission control logo and status */
+.sidebar-contents {
+    flex-grow: 0;
+    align-self: auto;
+}
+
+.sidebar-spacer {
+    flex-grow: 1
+}
+
+.sidebar-container-bottom {
+}
+
+.sidebar-footer {
+    height: 48px;
+    background: rgba(255, 255, 255, 0.08);
+    box-shadow: inset 0px 1px 0px rgba(255, 255, 255, 0.12);
+    padding: 8px 10px 8px 8px;
+}
+
+.sidebar-footer .rzi {
+    transition: transform 0.3s ease;
+}
+
+.sidebar-footer .rzi.collapsed {
+    transform: rotate(180deg);
+}
+
+#sidebar-collapse-button {
+    width: 36px;
+    height: 36px;
+    background: rgba(255, 255, 255, 0.08);
+    padding-left: 10px;
+}
+
+.sidebar-top {
+    max-width: var(--sidebar-width);
+}
+
+    /* Logo */
+    .sidebar-top img {
+        max-width: 120px;
+        width: auto;
+        height: 32px;
+        margin-top: 14px;
+    }
+
+    .sidebar-top p {
+        width: 20%;
+        margin-bottom: 0px;
+        padding-left: 14px;
+        color: var(--rz-base-200);
+    }
+
+/* radzen data-grid */
+.data-grid-header {
+    background-color: var(--rz-white);
+    display: flex;
+    padding-left: 16px;
+    margin-top: 12px;
+    align-items: center;
+    margin-bottom: -1px;
+}
+
+.data-grid-icon {
+    background: none;
+    background-color: rgba(255,255,255,0) !important;
+    box-shadow: none;
+}
+    .data-grid-icon:hover {
+        background-color: var(--rz-base-100);
+        box-shadow: none;
+        border-radius: 20em;
+    }
+
+
+/* Help and tooltips */
+.help-icon
+{
+    font-size: var(--icon-font-size);
+    color: var(--rz-base-00);
+    cursor: pointer;
+}
+
+.tooltip
+{
+    width: 480px;
+    height: auto;
+    white-space: normal;
+}
+
+.rz-tooltip-content {
+    background-color: var(--rz-black);
+    padding: 8px;
+}
+
+/* Page header contianing H2 and buttons */
+.page-title {
+    display: flex;
+    flex-direction: row;
+    justify-content: space-between;
+    padding: 24px 0px 24px 0px;
+    align-items: center;
+}
+
+.title-bottom {
+    max-height: 36px;
+}
+
+.rz-button {
+    text-transform: capitalize;
+}
+
+.rz-growl-message p {
+    margin: 0;
+}
+
+/* Growls */
+.rz-growl-message-info .rz-growl-item {
+    color: var(--rz-white);
+    background-color: var(--rz-black);
+}
+
+.rz-growl-message-info .rz-growl-image.rzi-info-circle {
+    color: var(--rz-white);
+}
+
+/* Page titles */
+.page-title-row h4 {
+    margin-top: 34px;
+    margin-bottom: 34px;
+}
+
+.page-title-row h5 {
+    margin-top: 34px;
+    margin-bottom: 34px;
+}
+
+/* Embedded DataGrid controls*/
+.rz-grid-table td .rz-cell-data {
+    overflow: visible;
+}
+
+/* ************************ Responsive Design ************************ */
+@media screen and (max-width: 768px) {
+    .rz-body {
+        width: calc(90vw);
+    }
+}
+
+@media screen and (max-width: 550px) {
+    .rz-body {
+        width: calc(87vw);
+    }
+}
+
+@media screen and (max-width: 350px) {
+    .page-title {
+        flex-direction:column;
+    }
+    .title-bottom {
+        width: 100%;
+    }
 }

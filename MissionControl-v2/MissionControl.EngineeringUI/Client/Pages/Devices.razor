@@ -1,22 +1,46 @@
 @page "/devices"
 @using Unity.ClusterDisplay.MissionControl.MissionControl
 
-<h3>Launch Complexes</h3>
-<RadzenDataGrid @ref="m_ComplexesGrid" Data=@Complexes.Collection.Values
-                SelectionMode="DataGridSelectionMode.Single" @bind-Value=@m_SelectedLaunchComplexes>
+<PageTitle>Devices</PageTitle>
+
+<RadzenStack Orientation="Orientation.Horizontal" JustifyContent="JustifyContent.SpaceBetween" AlignItems="AlignItems.Center" class="page-title-row">
+    <RadzenText Text="Devices" TextStyle="TextStyle.H4" />
+    <RadzenStack Orientation="Orientation.Horizontal">
+        <RadzenButton Click=@DeleteSelectedLaunchComplexes Text="Delete" Icon="delete" ButtonStyle="ButtonStyle.Light"
+                      Disabled=@(!HasSelection || MissionControlStatus.State is MissionControl.State.Launched) />
+        <RadzenButton Click=@AddLaunchComplex Text="Add New" Icon="add_circle_outline" ButtonStyle="ButtonStyle.Info" />
+    </RadzenStack>
+</RadzenStack>
+
+<RadzenText Text="Launch Complexes" Class="data-grid-header height-56 rz-border-base-300" TextStyle="TextStyle.DisplayH6" />
+<RadzenDataGrid @ref="m_ComplexesGrid" Data=@Complexes.Collection.Values SelectionMode="DataGridSelectionMode.Multiple"
+                @bind-Value=@m_SelectedComplexes AllowSorting="true" AllowRowSelectOnRowClick="false">
     <Columns>
-        <RadzenDataGridColumn TItem="LaunchComplex" Title="Name" Property="Name"/>
-        <RadzenDataGridColumn TItem="LaunchComplex" Title="HangarBay endpoint" Property="HangarBay.Endpoint" />
+        <RadzenDataGridColumn TItem="LaunchComplex" Width="60px" Sortable="false" Filterable="false">
+            <HeaderTemplate>
+                <RadzenCheckBox TriState="false" TValue="bool"
+                                Value="@HasSelection"
+                                Change=@SelectAllOrNone />
+            </HeaderTemplate>
+            <Template Context="launchComplex">
+                <RadzenCheckBox TriState="false" Value="@(m_SelectedComplexes?.Contains(launchComplex) ?? false)"
+                                TValue="bool" Change=@(args => m_ComplexesGrid.SelectRow(launchComplex)) />
+            </Template>
+        </RadzenDataGridColumn>
+        <RadzenDataGridColumn TItem="LaunchComplex" Title="Name" Property="Name" />
+        <RadzenDataGridColumn TItem="LaunchComplex" Title="HangarBay endpoint" Property="HangarBay.Endpoint" Sortable="false" />
         <RadzenDataGridColumn TItem="LaunchComplex" Title="Launchpad count">
             <Template Context="launchComplex">
                 <span>@launchComplex.LaunchPads.Count()</span>
             </Template>
         </RadzenDataGridColumn>
+        <RadzenDataGridColumn TItem="LaunchComplex" Width="110px" Sortable="false">
+            <Template Context="launchComplex">
+                <RadzenButton Icon="mode_edit" Class="m-1 data-grid-icon" Click=@(() => EditLaunchComplex(launchComplex))
+                              ButtonStyle="ButtonStyle.Light" Disabled=@(MissionControlStatus.State is MissionControl.State.Launched) />
+                <RadzenButton Icon="delete" Class="m-1 data-grid-icon" Click=@(() => DeleteLaunchComplex(launchComplex))
+                              ButtonStyle="ButtonStyle.Light" Disabled=@(MissionControlStatus.State is MissionControl.State.Launched) />
+            </Template>
+        </RadzenDataGridColumn>
     </Columns>
 </RadzenDataGrid>
-<RadzenButton Click=@AddLaunchComplex Text="Add New" Icon="add_circle_outline" ButtonStyle="ButtonStyle.Primary"
-              class="mt-2"/>
-<RadzenButton Click=@EditLaunchComplex Text="Edit" Icon="edit" ButtonStyle="ButtonStyle.Light"
-              class="mt-2" Disabled=@(SelectedLaunchComplexes == null) />
-<RadzenButton Click=@DeleteLaunchComplex Text="Delete" Icon="delete" ButtonStyle="ButtonStyle.Light"
-              class="mt-2" Disabled=@(SelectedLaunchComplexes == null) />

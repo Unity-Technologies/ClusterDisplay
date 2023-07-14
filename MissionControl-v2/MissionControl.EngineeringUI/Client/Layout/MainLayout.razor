@@ -1,23 +1,40 @@
+@using Unity.ClusterDisplay.MissionControl.EngineeringUI.Components
+@using Unity.ClusterDisplay.MissionControl.EngineeringUI.Services
 @inherits LayoutComponentBase
+@inject UiGlobal UiGlobal;
 
-<RadzenContextMenu />
-<RadzenDialog />
-<RadzenContextMenu />
-<RadzenTooltip />
+<RadzenContextMenu/>
+<RadzenDialog/>
+<RadzenContextMenu/>
+<RadzenTooltip/>
 
-<RadzenLayout>
-    <RadzenHeader>
-        <div class="d-flex align-items-center">
-            <RadzenSidebarToggle Click=@(() => UiGlobal.SideBarExpanded = !UiGlobal.SideBarExpanded) />
-            Mission Control (@MissionControlStatus.State)
-        </div>
+<RadzenLayout class="rz-shadow-3" Style="grid-template-areas: 'rz-sidebar rz-header' 'rz-sidebar rz-body'">
+    <RadzenHeader class="rz-shadow-1">
+        <LaunchControl/>
     </RadzenHeader>
+
     <RadzenSidebar @bind-Expanded="@UiGlobal.SideBarExpanded">
-        <NavPanel/>
+        <RadzenStack Orientation="Orientation.Vertical" JustifyContent="JustifyContent.SpaceBetween"
+                     Style="height: 100%" >
+            <RadzenStack class="sidebar-top" Orientation="Orientation.Vertical" JustifyContent="JustifyContent.Start"
+                         AlignItems="AlignItems.Stretch">
+                <RadzenImage
+                    Style="@(UiGlobal.SideBarExpanded ? "margin-left: 14px" : "margin-left: 0")"
+                    Path=@(UiGlobal.SideBarExpanded ? "images/MCunitylogo.png" : "images/unity-logo.svg")/>
+                <NavPanel/>
+            </RadzenStack>
+            <RadzenStack class="sidebar-footer " Orientation="Orientation.Horizontal" JustifyContent="JustifyContent.End" AlignItems="AlignItems.Center">
+                <RadzenButton id="sidebar-collapse-button"
+                              Click=@(() => UiGlobal.SideBarExpanded = !UiGlobal.SideBarExpanded)>
+                    <span class="rzi @(UiGlobal.SideBarExpanded ? "": "collapsed")">arrow_back_ios</span>
+                </RadzenButton>
+            </RadzenStack>
+        </RadzenStack>
     </RadzenSidebar>
-    <RadzenBody>
+    <RadzenBody class="rz-px-8">
         <div class="p-2">
             @Body
         </div>
     </RadzenBody>
+    <RadzenNotification/>
 </RadzenLayout>

@@ -57,7 +57,7 @@ namespace Unity.ClusterDisplay.MissionControl.EngineeringUI.Services
         /// <param name="id">Identifier of the <see cref="Asset"/> to delete.</param>
         /// <remarks>We do not update <see cref="Collection"/> immediately, we wait for the update from MissionControl
         /// the same way as we would receive updates if it was done by some other device.</remarks>
-        public Task DeleteAsync(Guid id)
+        public Task<HttpResponseMessage> DeleteAsync(Guid id)
         {
             return m_HttpClient.DeleteAsync($"assets/{id}");
         }

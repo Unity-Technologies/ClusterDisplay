@@ -1,6 +1,8 @@
 using Microsoft.AspNetCore.Components;
 using Radzen;
 using Radzen.Blazor;
+using System.Reflection;
+using Unity.ClusterDisplay.MissionControl.EngineeringUI.Dialogs;
 using Unity.ClusterDisplay.MissionControl.EngineeringUI.Services;
 using Unity.ClusterDisplay.MissionControl.MissionControl;
 
@@ -22,12 +24,24 @@ namespace Unity.ClusterDisplay.MissionControl.EngineeringUI.Pages
         [Inject]
         DialogService DialogService { get; set; } = default!;
         [Inject]
-        NavigationManager NavigationManager { get; set; } = default!;
-
-        SavedMissionSummary? SelectedMission => m_SelectedMission?.FirstOrDefault();
+        NotificationService NotificationService { get; set; } = default!;
 
         RadzenDataGrid<SavedMissionSummary> m_MissionsGrid = default!;
-        IList<SavedMissionSummary>? m_SelectedMission;
+        IList<SavedMissionSummary> m_SelectedSnapshots = new List<SavedMissionSummary>();
+
+        bool HasSelection => MissionsService.Collection.Values.Any(i => m_SelectedSnapshots.Contains(i));
+
+        void SelectAllOrNone(bool all)
+        {
+            m_SelectedSnapshots.Clear();
+            if (all)
+            {
+                foreach (var snapshot in MissionsService.Collection.Values)
+                {
+                    m_SelectedSnapshots.Add(snapshot);
+                }
+            }
+        }
 
         protected override void OnInitialized()
         {
@@ -38,106 +52,39 @@ namespace Unity.ClusterDisplay.MissionControl.EngineeringUI.Pages
             AssetsService.Collection.SomethingChanged += AssetsChanged;
         }
 
-        async Task SaveAs()
+        async Task Load(SavedMissionSummary mission)
         {
-            var ret = await DialogService.OpenAsync<Dialogs.SaveDialog>($"Save current configuration as...",
-                new Dictionary<string, object>(),
-                new DialogOptions() { Width = "60%", Height = "60%", Resizable = true, Draggable = true });
-
-            if (ret == null)
-            {
-                return;
-            }
-
-            if (LaunchConfigurationService.WorkValueNeedsPush)
-            {
-                await LaunchConfigurationService.PushWorkToMissionControlAsync();
-            }
-
-            await MissionCommandsService.SaveMissionAsync((SaveMissionCommand)ret);
+            await MissionCommandsService.LoadMissionAsync(mission.Id);
+            NotificationService.Notify(severity: NotificationSeverity.Info, summary: $"Loaded snapshot \"{mission.Description.Name}\" into the current launch configuration.");
         }
 
-        async Task Overwrite()
+        async Task Delete(SavedMissionSummary mission)
         {
-            var selectedMission = SelectedMission;
-            if (selectedMission == null)
-            {
-                return;
-            }
-
-            SaveMissionCommand saveCommand = new() { Identifier = selectedMission.Id };
-            saveCommand.Description.DeepCopyFrom(selectedMission.Description);
-
-            var ret = await DialogService.OpenAsync<Dialogs.SaveDialog>($"Save current configuration as...",
-                new Dictionary<string, object>{ {"Command", saveCommand} },
-                new DialogOptions() { Width = "60%", Height = "60%", Resizable = true, Draggable = true });
-
-            if (ret == null)
-            {
-                return;
-            }
-
-            if (LaunchConfigurationService.WorkValueNeedsPush)
-            {
-                await LaunchConfigurationService.PushWorkToMissionControlAsync();
-            }
-
-            await MissionCommandsService.SaveMissionAsync((SaveMissionCommand)ret);
-        }
-
-        async Task Load()
-        {
-            var selectedMission = SelectedMission;
-            if (selectedMission == null)
-            {
-                return;
-            }
-
-            if (LaunchConfigurationService.WorkValueNeedsPush)
-            {
-                var ret = await DialogService.Confirm($"Discard non applied changes to the launch configuration?",
-                    "Discard changes?", new () { OkButtonText = "Yes", CancelButtonText = "No" });
-                if (!ret.HasValue || !ret.Value)
-                {
-                    return;
-                }
-                LaunchConfigurationService.ClearWorkValue();
-            }
-
-            await MissionCommandsService.LoadMissionAsync(selectedMission.Id);
-        }
-
-        async Task LoadAndLaunch()
-        {
-            var selectedMission = SelectedMission;
-            if (selectedMission == null)
-            {
-                return;
-            }
-
-            await MissionCommandsService.LoadMissionAsync(selectedMission.Id);
-
-            await MissionCommandsService.LaunchMissionAsync();
-
-            NavigationManager.NavigateTo("/launch");
-        }
-
-        async Task Delete()
-        {
-            var selectedMission = SelectedMission;
-            if (selectedMission == null)
-            {
-                return;
-            }
-
-            var ret = await DialogService.Confirm($"Do you really want to delete {selectedMission.Description.Name}?",
+            var ret = await DialogService.CustomConfirm($"Do you really want to delete {mission.Description.Name}?",
                 "Confirm deletion", new () { OkButtonText = "Yes", CancelButtonText = "No" });
-            if (!ret.HasValue || !ret.Value)
+            if (!ret)
             {
                 return;
             }
 
-            await MissionsService.DeleteAsync(selectedMission.Id);
+            await MissionsService.DeleteAsync(mission.Id);
+            NotificationService.Notify(severity: NotificationSeverity.Info, summary: $"Deleted snapshot \"{mission.Description.Name}\"");
+        }
+
+        async Task DeleteSelectedSnapshots()
+        {
+            if (!HasSelection) return;
+
+            var ret = await DialogService.CustomConfirm($"Do you want to delete the selected snapshots?",
+    "Confirm deletion", new() { OkButtonText = "Yes", CancelButtonText = "No" });
+            if (!ret)
+            {
+                return;
+            }
+
+            await Task.WhenAll(m_SelectedSnapshots.Select(i => MissionsService.DeleteAsync(i.Id)));
+            SelectAllOrNone(all: false);
+            NotificationService.Notify(severity: NotificationSeverity.Info, summary: $"Snapshots deleted");
         }
 
         public void Dispose()

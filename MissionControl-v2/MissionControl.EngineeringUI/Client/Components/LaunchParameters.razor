@@ -1,7 +1,8 @@
+@inherits RadzenComponent
+
 <RadzenDataGrid Data=@Entries @ref="m_EntriesGrid"
                 AllowMultiColumnSorting="true" ShowMultiColumnSortingIndex="true" AllowSorting="true"
-                ExpandMode="DataGridExpandMode.Single" RowRender=@RowRender
-                SelectionMode="DataGridSelectionMode.Single" @bind-Value=@m_SelectedEntries>
+                ExpandMode="DataGridExpandMode.Single" RowRender=@RowRender>
     <Template Context="entry">
         @{
             var nestedEntry = (NestedEntry)entry;
@@ -10,18 +11,32 @@
                           Parameters=@nestedEntry.Parameters Values=@nestedEntry.Values />
     </Template>
     <Columns>
-        <RadzenDataGridColumn TItem="Entry" Title="Name" Property="Name" />
-        <RadzenDataGridColumn TItem="Entry" Title="Value" Property="Value" />
+        <RadzenDataGridColumn TItem="Entry" Title="Name" Property="Name">
+            <Template Context="entry">
+                <RadzenStack Orientation="Orientation.Horizontal" JustifyContent="JustifyContent.Left" Gap="2rem">
+                    <span>@(entry.Name)</span>
+                    @if (entry is ParameterEntry parameterEntry)
+                    {
+                        <ParameterHelp Icon="help" HelpText="@(parameterEntry.Definition?.Description)" />
+                    }
+                </RadzenStack>
+            </Template>
+        </RadzenDataGridColumn>
+        <RadzenDataGridColumn TItem="Entry" Title="Value" Property="Value" Sortable="false">
+            @* Make inline fields to edit parameter values *@
+            <Template Context="entry">
+                @if (entry is ParameterEntry parameterEntry)
+                {
+                    <LaunchParameterInput Entry="@parameterEntry" OnValueChanged="@OnParameterValueChanged" />
+                }
+            </Template>
+        </RadzenDataGridColumn>
+        <RadzenDataGridColumn TItem="Entry" Width="60px" Sortable="false">
+            <Template Context="entry">
+                <RadzenButton Icon="refresh" Class="data-grid-icon"
+                              Click="@(args => ResetToDefault(entry))" ButtonStyle="ButtonStyle.Light"
+                              Disabled=@(ShowingDefaultValue(entry)) />
+            </Template>
+        </RadzenDataGridColumn>
     </Columns>
 </RadzenDataGrid>
-<RadzenButton Click=OnSetValue
-              Text=@((SelectedEntry == null || SelectedEntry.ParameterValue == null) ? "Set" : "Edit") Icon="edit"
-              Class="mt-2" Style="width: 175px"
-              Disabled=@(SelectedEntry == null || SelectedEntry.Definition == null ||
-                         MissionControlStatus.State != MissionControl.State.Idle)
-              title=@(MissionControlStatus.State != MissionControl.State.Idle ? "Can only change launch parameters when idle": "") />
-<RadzenButton Click=OnClearValue Text="Use default" Icon="clear"
-              Class="mt-2" Style="width: 175px" ButtonStyle="ButtonStyle.Light"
-              Disabled=@(SelectedEntry == null || SelectedEntry.ParameterValue == null ||
-                         MissionControlStatus.State != MissionControl.State.Idle)
-              title=@(MissionControlStatus.State != MissionControl.State.Idle ? "Can only change launch parameters when idle": "") />

@@ -87,6 +87,16 @@ namespace Unity.ClusterDisplay.MissionControl.EngineeringUI.Services
             WorkValue.SignalChanges();
         }
 
+        /// <summary>
+        /// Set the working values to defaults (that is, uninitialized states)
+        /// </summary>
+        public void ResetParametersToDefault()
+        {
+            WorkValue.LaunchComplexes = Enumerable.Empty<LaunchComplexConfiguration>();
+            WorkValue.Parameters = Enumerable.Empty<LaunchParameterValue>();
+            WorkValue.SignalChanges();
+        }
+
         void LaunchConfigurationUpdate(JsonElement update)
         {
             var deserializeRet = update.Deserialize<LaunchConfiguration>(Json.SerializerOptions);

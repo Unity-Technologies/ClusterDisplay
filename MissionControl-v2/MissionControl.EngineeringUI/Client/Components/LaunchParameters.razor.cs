@@ -12,6 +12,10 @@ namespace Unity.ClusterDisplay.MissionControl.EngineeringUI.Components
     {
         [Parameter]
         public IEnumerable<LaunchParameter> Parameters { get; set; } = Enumerable.Empty<LaunchParameter>();
+
+        /// <summary>
+        /// The parameter values that we are ultimately editing.
+        /// </summary>
         [Parameter]
         public List<LaunchParameterValue> Values { get; set; } = new();
         [Parameter]
@@ -30,7 +34,7 @@ namespace Unity.ClusterDisplay.MissionControl.EngineeringUI.Components
         /// <summary>
         /// One entry displayed in the grid
         /// </summary>
-        protected abstract class Entry
+        public abstract class Entry
         {
             public abstract string Name { get; }
             public abstract object Value { get; }
@@ -41,23 +45,33 @@ namespace Unity.ClusterDisplay.MissionControl.EngineeringUI.Components
         /// <summary>
         /// One entry representing a parameter in the grid
         /// </summary>
-        protected class ParameterEntry: Entry
+        public class ParameterEntry : Entry
         {
             public LaunchParameter? Definition { get; set; }
             public LaunchParameterValue? ParameterValue { get; set; }
             public string Id { get; init; } = "";
 
-            public override string Name => Definition?.Name ?? "(unknown)";
-            public override object Value => ParameterValue?.Value ?? "(automatic)";
+            public string? ValidationError { get; set; } = null;
+
+            public override string Name => Definition?.Name ?? $"(Unused: {ParameterValue?.Id ?? ""})";
+            public override object Value => ParameterValue?.Value ?? (Definition?.DefaultValue ?? "unknown");
             public override bool IsEmpty => Definition == null && ParameterValue == null;
             public override void Clear()
             {
                 Definition = null;
                 ParameterValue = null;
+                ValidationError = null;
             }
         }
 
-        protected class NestedEntry: Entry
+        /// <summary>
+        /// An entry that consists of a group of parameters.
+        /// </summary>
+        /// <remarks>
+        /// Each <see cref="NestedEntry"/> generates a recursive <see cref="LaunchParameter"/> component
+        /// in the UI.
+        /// </remarks>
+        protected class NestedEntry : Entry
         {
             public string NestedPrefix { get; set; } = "";
             public string NestedName { get; init; } = "";
@@ -76,83 +90,50 @@ namespace Unity.ClusterDisplay.MissionControl.EngineeringUI.Components
             }
         }
 
-        protected List<Entry> Entries { get; } = new();
+        List<Entry> Entries { get; } = new();
 
-        protected ParameterEntry? SelectedEntry => m_SelectedEntries?.FirstOrDefault() as ParameterEntry;
-
-        protected RadzenDataGrid<Entry> m_EntriesGrid = default!;
-        protected IList<Entry>? m_SelectedEntries;
+        RadzenDataGrid<Entry>? m_EntriesGrid;
 
         protected override void OnParametersSet()
         {
             base.OnParametersSet();
             FillEntries();
-            // ReSharper disable once ConditionalAccessQualifierIsNonNullableAccordingToAPIContract
             m_EntriesGrid?.Reload();
         }
 
-        protected void RowRender(RowRenderEventArgs<Entry> args)
+        static void RowRender(RowRenderEventArgs<Entry> args)
         {
             args.Expandable = args.Data is NestedEntry;
         }
 
-        async Task OnSetValue()
+        void OnParameterValueChanged(ParameterEntry entry)
         {
-            var entry = SelectedEntry;
-            if (entry == null || entry.Definition == null)
+            if (entry.ValidationError != null)
             {
+                Logger.LogWarning($"{entry.Name}: {entry.ValidationError}");
                 return;
             }
 
-            var toEdit = entry.ParameterValue;
-            toEdit ??= new() { Id = entry.Id, Value = entry.Definition.DefaultValue! };
-
-            var ret = await DialogService.OpenAsync<EditLaunchParameter>($"Set {entry.Name}",
-               new Dictionary<string, object>{ {"Parameter", entry.Definition}, {"ToEdit", toEdit} },
-               new DialogOptions() { Width = "40%", Height = "40%", Resizable = true, Draggable = true });
-            if (ret == null)
+            Debounce(async () =>
             {
-                return;
-            }
-
-            entry.ParameterValue = (LaunchParameterValue)ret;
-            int valueIndex = Values.FindIndex(0, v => v.Id == entry.Id);
-            if (valueIndex >= 0)
-            {
-                Values[valueIndex] = entry.ParameterValue;
-            }
-            else
-            {
-                Values.Add(entry.ParameterValue);
-            }
-
-            await OnValuesUpdated.InvokeAsync(Values);
-        }
-
-        async Task OnClearValue()
-        {
-            var entry = SelectedEntry;
-            if (entry == null)
-            {
-                return;
-            }
-
-            int valueIndex = Values.FindIndex(0, v => v.Id == entry.Id);
-            if (valueIndex >= 0)
-            {
-                Values.RemoveAt(valueIndex);
-            }
-
-            if (entry.Definition == null)
-            {
-                Entries.Remove(entry);
-            }
-            else
-            {
-                entry.ParameterValue = null;
-            }
-
-            await OnValuesUpdated.InvokeAsync(Values);
+                int valueIndex = Values.FindIndex(0, v => v.Id == entry.Id);
+                if (valueIndex >= 0)
+                {
+                    if (entry.ParameterValue is not null)
+                    {
+                        Values[valueIndex] = entry.ParameterValue;
+                    }
+                    else
+                    {
+                        Values.RemoveAt(valueIndex);
+                    }
+                }
+                else if (entry.ParameterValue is not null)
+                {
+                    Values.Add(entry.ParameterValue);
+                }
+                await OnValuesUpdated.InvokeAsync(Values);
+            });
         }
 
         async Task OnNestedValuesChanged(List<LaunchParameterValue> nestedValues)
@@ -238,7 +219,7 @@ namespace Unity.ClusterDisplay.MissionControl.EngineeringUI.Components
                     }
                     else
                     {
-                        parameterEntry = new (){ Id = parameter.Id, Definition = parameter };
+                        parameterEntry = new() { Id = parameter.Id, Definition = parameter };
                         Entries.Add(parameterEntry);
                     }
                     parametersEntry[parameter.Id] = parameterEntry;
@@ -250,8 +231,10 @@ namespace Unity.ClusterDisplay.MissionControl.EngineeringUI.Components
                         e => e is NestedEntry nestedEntry && nestedEntry.NestedName == nestedName);
                     if (nestedEntry == null)
                     {
-                        nestedEntry = new NestedEntry() {
-                            NestedPrefix = $"{NestedPrefix}/{nestedName}", NestedName = nestedName
+                        nestedEntry = new NestedEntry()
+                        {
+                            NestedPrefix = $"{NestedPrefix}/{nestedName}",
+                            NestedName = nestedName
                         };
                         if (nestedEntry.NestedPrefix.StartsWith('/'))
                         {
@@ -301,6 +284,33 @@ namespace Unity.ClusterDisplay.MissionControl.EngineeringUI.Components
                     nestedEntry.PreviousValues.Clear();
                     nestedEntry.PreviousValues.AddRange(nestedEntry.Values);
                 }
+            }
+        }
+
+        // Is the field currently showing the default value for the parameter?
+        static bool ShowingDefaultValue(Entry entry) =>
+            entry switch
+            {
+                ParameterEntry parameterEntry => parameterEntry.ParameterValue is null && parameterEntry.ValidationError is null,
+                NestedEntry nestedEntry => !nestedEntry.Values.Any(),
+                _ => throw new ArgumentOutOfRangeException(nameof(entry))
+            };
+
+        async Task ResetToDefault(Entry entry)
+        {
+            switch (entry)
+            {
+                case ParameterEntry parameterEntry:
+                    parameterEntry.ParameterValue = null;
+                    parameterEntry.ValidationError = null;
+                    OnParameterValueChanged(parameterEntry);
+                    break;
+                case NestedEntry nestedEntry:
+                    nestedEntry.Values.Clear();
+                    await OnNestedValuesChanged(nestedEntry.Values);
+                    break;
+                default:
+                    throw new ArgumentOutOfRangeException(nameof(entry));
             }
         }
     }

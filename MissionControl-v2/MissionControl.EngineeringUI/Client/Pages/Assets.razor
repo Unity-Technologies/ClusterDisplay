@@ -1,12 +1,33 @@
 @page "/assets"
 @using Unity.ClusterDisplay.MissionControl.MissionControl
 
-<h3>Assets</h3>
+<PageTitle>Assets</PageTitle>
+<RadzenStack Orientation="Orientation.Horizontal" JustifyContent="JustifyContent.SpaceBetween" AlignItems="AlignItems.Center" class="page-title-row">
+    <RadzenText Text="Assets" TextStyle="TextStyle.H4" />
+    <RadzenStack Orientation="Orientation.Horizontal">
+        <RadzenButton Click=@DeleteSelectedAssets Text="Delete" Icon="delete" ButtonStyle="ButtonStyle.Light"
+                      Disabled=@(!HasSelection) />
+        <RadzenButton Click=@AddAsset Text="Add New" Icon="add_circle_outline" ButtonStyle="ButtonStyle.Info" />
+    </RadzenStack>
+</RadzenStack>
+
 <RadzenDataGrid @ref="m_AssetsGrid" Data=@AssetsService.Collection.Values
                 AllowMultiColumnSorting="true" ShowMultiColumnSortingIndex="true" AllowSorting="true"
-                SelectionMode="DataGridSelectionMode.Single" @bind-Value=@m_SelectedAsset>
+                AllowRowSelectOnRowClick="false"
+                @bind-Value=@m_SelectedAssets SelectionMode="DataGridSelectionMode.Multiple">
     <Columns>
-        <RadzenDataGridColumn TItem="Asset" Title="Name" Property="Name"/>
+        <RadzenDataGridColumn TItem="Asset" Width="60px" Sortable="false" Filterable="false">
+            <HeaderTemplate>
+                <RadzenCheckBox TriState="false" TValue="bool"
+                                Value="@HasSelection"
+                                Change=@SelectAllOrNone />
+            </HeaderTemplate>
+            <Template Context="asset">
+                <RadzenCheckBox TriState="false" Value="@(m_SelectedAssets != null && m_SelectedAssets.Contains(asset))"
+                                TValue="bool" Change=@(args => m_AssetsGrid.SelectRow(asset)) />
+            </Template>
+        </RadzenDataGridColumn>
+        <RadzenDataGridColumn TItem="Asset" Title="Name" Property="Name" />
         <RadzenDataGridColumn TItem="Asset" Title="Description" Property="Description" />
         <RadzenDataGridColumn TItem="Asset" Title="Size" Property="StorageSize">
             <Template Context="asset">
@@ -15,19 +36,17 @@
         </RadzenDataGridColumn>
         <RadzenDataGridColumn TItem="Asset" Title="Reference count" Sortable="false">
             <Template Context="asset">
-                @if (AssetsUsageCount.ContainsKey(asset.Id))
-                {
-                    <span>@AssetsUsageCount[asset.Id]</span>
-                }
-                else
-                {
-                    <span>0</span>
-                }
+                <span>@(AssetsUsageCount.TryGetValue(asset.Id, out var count) ? count : 0)</span>
+            </Template>
+        </RadzenDataGridColumn>
+        <RadzenDataGridColumn TItem="Asset" Width="70px" Sortable="false">
+            <Template Context="asset">
+                <RadzenButton Icon="delete"
+                              Disabled=@(AssetsUsageCount.TryGetValue(asset.Id, out var count) && count > 0)
+                              Click=@(() => DeleteAsset(asset)) Class="data-grid-icon"
+                              ButtonStyle="ButtonStyle.Light" />
             </Template>
         </RadzenDataGridColumn>
     </Columns>
 </RadzenDataGrid>
-<RadzenButton Click=@AddAsset Text="Add New" Icon="add_circle_outline" ButtonStyle="ButtonStyle.Primary"
-              class="mt-2"/>
-<RadzenButton Click=@DeleteAsset Text="Delete" Icon="delete" ButtonStyle="ButtonStyle.Light" class="mt-2"
-              Disabled=@(SelectedAsset == null || SelectedAsset == null || AssetsUsageCount.ContainsKey(SelectedAsset.Id)) />
+

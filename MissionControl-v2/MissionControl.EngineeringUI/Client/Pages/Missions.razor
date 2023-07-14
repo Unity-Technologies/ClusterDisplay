@@ -1,17 +1,34 @@
 @page "/missions"
 @using Unity.ClusterDisplay.MissionControl.MissionControl;
 
-<style>
-    .rz-splitbutton button:not(.rz-splitbutton-menubutton) {
-        width: 100%;
-    }
-</style>
+@{
+    var isRunning = MissionControlStatus.State != State.Idle;
+    var loadTitle = isRunning ? "Cannot load while running." : "";
+}
 
-<h3>Missions</h3>
+<PageTitle>Snapshots</PageTitle>
+
+<RadzenStack Orientation="Orientation.Horizontal" JustifyContent="JustifyContent.SpaceBetween" AlignItems="AlignItems.Center" class="page-title-row">
+<RadzenText Text="Snapshots" TextStyle="TextStyle.DisplayH4" />
+    <RadzenButton Click=@DeleteSelectedSnapshots Text="Delete" Icon="delete" ButtonStyle="ButtonStyle.Light"
+                  Disabled=@(!HasSelection) />
+</RadzenStack>
+
 <RadzenDataGrid @ref="m_MissionsGrid" Data=@MissionsService.Collection.Values
                 AllowMultiColumnSorting="true" ShowMultiColumnSortingIndex="true" AllowSorting="true"
-                SelectionMode="DataGridSelectionMode.Single" @bind-Value=@m_SelectedMission>
+                AllowRowSelectOnRowClick="false" SelectionMode="DataGridSelectionMode.Multiple" @bind-Value="@m_SelectedSnapshots">
     <Columns>
+        <RadzenDataGridColumn TItem="SavedMissionSummary" Width="60px" Sortable="false" Filterable="false">
+            <HeaderTemplate>
+                <RadzenCheckBox TriState="false" TValue="bool"
+                                Value="@HasSelection"
+                                Change=@SelectAllOrNone />
+            </HeaderTemplate>
+            <Template Context="mission">
+                <RadzenCheckBox TriState="false" Value="@(m_SelectedSnapshots.Contains(mission))"
+                                TValue="bool" Change=@(args => m_MissionsGrid.SelectRow(mission)) />
+            </Template>
+        </RadzenDataGridColumn>
         <RadzenDataGridColumn TItem="SavedMissionSummary" Title="Name" Property="Description.Name" />
         <RadzenDataGridColumn TItem="SavedMissionSummary" Title="Description" Property="Description.Details" />
         <RadzenDataGridColumn TItem="SavedMissionSummary" Title="Save time" Property="SaveTime"/>
@@ -23,38 +40,12 @@
                 }
             </Template>
         </RadzenDataGridColumn>
+        <RadzenDataGridColumn TItem="SavedMissionSummary" Width="130px">
+            <Template Context="mission">
+                <RadzenButton Variant="Variant.Text" Click=@(() => Load(mission)) Text="Load" ButtonStyle="ButtonStyle.Info" />
+                <RadzenButton Icon="delete" Class="m-1 data-grid-icon" Click=@(() => Delete(mission)) ButtonStyle="ButtonStyle.Light" />
+            </Template>
+        </RadzenDataGridColumn>
     </Columns>
 </RadzenDataGrid>
-@{
-    var isRunning = MissionControlStatus.State != State.Idle;
-    var hasChanges = LaunchConfigurationService.WorkValueNeedsPush;
-    var applyPrefix = hasChanges ? "Apply & " : "";
-    var applyAndSaveEnabled = !isRunning || !hasChanges;
-    var applyAndSaveTitle = applyAndSaveEnabled ? "" : "Cannot apply changes while running.";
-    var loadTitle = isRunning ? "Cannot load while running." : "";
-}
-@if (SelectedMission == null)
-{
-    <RadzenButton Click=@SaveAs Text=@($"{applyPrefix}Save as...") Icon="save_as" ButtonStyle="ButtonStyle.Primary"
-                  class="mt-2 me-1" Style="width: 250px;" Disabled=@(!applyAndSaveEnabled) title=@applyAndSaveTitle />
-}
-else
-{
-    <RadzenSplitButton Click=@SaveAs Text=@($"{applyPrefix}Save as...") Icon="save_as" ButtonStyle="ButtonStyle.Primary"
-                       class="mt-2 me-1" Style="width: 250px;" Disabled=@(!applyAndSaveEnabled) title=@applyAndSaveTitle >
-        <ChildContent>
-            <RadzenSplitButtonItem Text=@($"{applyPrefix}Overwrite {SelectedMission.Description.Name}...") Icon="save"
-                                   onclick=@Overwrite />
-        </ChildContent>
-    </RadzenSplitButton>
-}
-<RadzenSplitButton Click=@Load Text="Load" Icon="file_open" ButtonStyle="ButtonStyle.Light"
-                   class="mt-2 me-1" Style="width: 250px;"
-                   Disabled=@(SelectedMission == null || MissionControlStatus.State != State.Idle) title=@loadTitle>
-    <ChildContent>
-        <RadzenSplitButtonItem Text="Load & Launch" Icon="rocket_launch" onclick=@LoadAndLaunch
-                               Disabled=@(SelectedMission == null || SelectedMission.AssetId == Guid.Empty) />
-    </ChildContent>
-</RadzenSplitButton>
-<RadzenButton Click=@Delete Text="Delete" Icon="delete" ButtonStyle="ButtonStyle.Light" class="mt-2" Style="width: 250px;"
-              Disabled=@(SelectedMission == null) />
+

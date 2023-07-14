@@ -1,0 +1,32 @@
+@inject DialogService DialogService
+
+<RadzenStack Orientation="Orientation.Vertical">
+    <RadzenText Text="@Message" />
+    @if (Prompt != null)
+    {
+        <RadzenText Text=@($"To confirm, type \"{Prompt}\" into the box below") />
+        <RadzenTextBox @oninput=@(args => m_PromptEntry = args.Value.ToString())/>
+    }
+    <RadzenStack Orientation="Orientation.Horizontal" JustifyContent="JustifyContent.End">
+        <RadzenButton Variant="Variant.Text" Text="@CancelText" ButtonStyle="ButtonStyle.Dark" Click="@(_ => DialogService.Close(false))" />
+        <RadzenButton Variant="Variant.Text" Text="@ConfirmText" ButtonStyle="ButtonStyle.Danger" Click="@(_ => DialogService.Close(true))" Disabled=@BlockConfirm/>
+    </RadzenStack>
+</RadzenStack>
+
+@code {
+    [Parameter]
+    public string Message { get; set; } = "Are you sure you want to continue?";
+
+    [Parameter]
+    public string CancelText { get; set; } = "Cancel";
+
+    [Parameter]
+    public string ConfirmText { get; set; } = "Confirm";
+
+    [Parameter]
+    public string? Prompt { get; set; } = null;
+
+    string m_PromptEntry;
+
+    bool BlockConfirm => Prompt is not null && m_PromptEntry != Prompt;
+}

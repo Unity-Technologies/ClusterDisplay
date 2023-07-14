@@ -1,76 +1,55 @@
 @using MissionControl
 
-<RadzenTemplateForm TItem="LaunchComplex" Data=@Edited Submit=@OnOk Style="height: 100%;">
-    <div class="row" style="height: calc(100% - 40px); overflow-y: auto;">
-        <div> <!-- To avoid stretching every row of the fixed height container above -->
-            <div class="row mb-1">
-                <div class="col-3 align-items-center d-flex">
-                    <RadzenLabel Text="Name" />
-                </div>
-                <div class="col-9">
-                    <RadzenTextBox Name="ComplexName" style="width: 100%;" @bind-Value=@Edited.Name />
-                    <RadzenRequiredValidator Component="ComplexName" Text="Name is required" />
-                </div>
-            </div>
-            <div class="row my-1">
-                <div class="col-3 align-items-center d-flex">
-                    <RadzenLabel Text="Hangar bay endpoint" />
-                </div>
-                <div class="col-9">
-                    <RadzenTextBox style="width: 100%;" @bind-Value=@EditedHangarBayEndpoint />
-                    @if (EditedHangarBayEndpointErrorMessage != "")
-                    {
-                        <span class="rz-message rz-messages-error" style="width: 100%;">
-                            @EditedHangarBayEndpointErrorMessage
-                        </span>
-                    }
-                </div>
-            </div>
-            <div class="row my-1">
-                <div class="col-3 align-items-center d-flex">
-                    <RadzenLabel Text="Hangar bay identifier" />
-                </div>
-                <div class="col-9">
-                    <div class="align-items-center d-flex">
-                        <RadzenTextBox style="width: 100%;" Value=@Edited.HangarBay.Identifier.ToString() Disabled="true"/>
-                        <RadzenButton Icon="refresh" ButtonStyle="ButtonStyle.Light" Disabled=@(EditedHangarBayEndpoint == "")
-                                      Click=@OnValidateHangarBayEndpoint />
-                    </div>
-                    @if (EditedHangarBayIdentifierErrorMessage != "")
-                    {
-                        <span class="rz-message rz-messages-error" style="width: 100%;">
-                            @EditedHangarBayIdentifierErrorMessage
-                        </span>
-                    }
-                </div>
-            </div>
-            <div class="row my-1">
-                <div class="col-3 align-items-start d-flex">
-                    <RadzenLabel Text="Launchpads" />
-                </div>
-                <div class="col-9">
-                    <RadzenDataGrid Data=@Edited.LaunchPads @ref="m_LaunchpadsGrid"
-                                    SelectionMode="DataGridSelectionMode.Single" @bind-Value=@SelectedLaunchPads>
-                        <Columns>
-                            <RadzenDataGridColumn TItem="LaunchPad" Title="Name" Property="Name" />
-                            <RadzenDataGridColumn TItem="LaunchPad" Title="Endpoint" Property="Endpoint" />
-                        </Columns>
-                    </RadzenDataGrid>
-                    <RadzenButton Click=@AddLaunchPad Text="Add New" Icon="add_circle_outline"
-                                  ButtonStyle="ButtonStyle.Primary" class="mt-2" />
-                    <RadzenButton Click=@EditLaunchPad Text="Edit" Icon="edit" ButtonStyle="ButtonStyle.Light"
-                                  class="mt-2" Disabled=@(SelectedLaunchPads == null || !SelectedLaunchPads.Any()) />
-                    <RadzenButton Click=@DeleteLaunchPad Text="Delete" Icon="delete" ButtonStyle="ButtonStyle.Light"
-                                  class="mt-2" Disabled=@(SelectedLaunchPads == null || !SelectedLaunchPads.Any()) />
-                </div>
-            </div>
-        </div>
-    </div>
-    <div class="row mt-1">
-        <div class="col-12 text-end">
-            <RadzenButton Text=@(ToEdit.Id == Guid.Empty ? "Add" : "Update") ButtonType="ButtonType.Submit"
-                          Style="width: 120px" Class="me-1"/>
+<RadzenTemplateForm TItem="LaunchComplex" Data=@Edited Submit=@OnOk class="h-100">
+    <RadzenStack Orientation="Orientation.Vertical" JustifyContent="JustifyContent.SpaceBetween" class="h-100">
+        <RadzenStack Orientation="Orientation.Vertical">
+            <RadzenStack Orientation="Orientation.Vertical" Gap="0">
+                <RadzenText Text="Name" />
+                <RadzenTextBox Name="ComplexName" @bind-Value=@Edited.Name class="w-100" />
+                <RadzenRequiredValidator Component="ComplexName" Text="Name is required" />
+                <RadzenText Text="Hangar bay endpoint" />
+                <RadzenTextBox @bind-Value=@EditedHangarBayEndpoint class="w-100" />
+                @if (EditedHangarBayEndpointErrorMessage != "")
+                {
+                    <span class="rz-message rz-messages-error">
+                        @EditedHangarBayEndpointErrorMessage
+                    </span>
+                }
+                <RadzenText Text="Hangar bay identifier" />
+                <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center">
+                    <RadzenTextBox Value=@Edited.HangarBay.Identifier.ToString() Disabled="true" class="w-100" />
+                    <RadzenButton Size="ButtonSize.Medium" Icon="refresh" ButtonStyle="ButtonStyle.Info" Disabled=@(EditedHangarBayEndpoint == "")
+                                  Click=@OnValidateHangarBayEndpoint Variant="Variant.Outlined" class="rz-ml-4" />
+                </RadzenStack>
+            </RadzenStack>
+            <RadzenStack Orientation="Orientation.Vertical">
+                <RadzenStack Orientation="Orientation.Horizontal" JustifyContent="JustifyContent.SpaceBetween" AlignItems="AlignItems.End">
+                    <RadzenText class="col-5" TextStyle="TextStyle.H6" Text="Launchpads" />
+                    <RadzenButton Click=@AddLaunchPad Text="Add New" Icon="add_circle_outline" ButtonStyle="ButtonStyle.Info" />
+                </RadzenStack>
+                <RadzenDataGrid Data=@Edited.LaunchPads @ref="m_LaunchpadsGrid">
+                    <Columns>
+                        <RadzenDataGridColumn TItem="LaunchPad" Title="Name" Property="Name" />
+                        <RadzenDataGridColumn TItem="LaunchPad" Title="Endpoint" Property="Endpoint" />
+                        <RadzenDataGridColumn TItem="LaunchPad" Width="110px">
+                            <Template Context="launchPad">
+                                <RadzenButton Click=@(() => EditLaunchPad(launchPad)) Icon="edit" ButtonStyle="ButtonStyle.Light"
+                                              class="m-1 data-grid-icon" />
+                                <RadzenButton Click=@(() => DeleteLaunchPad(launchPad)) Icon="delete" ButtonStyle="ButtonStyle.Light"
+                                              Class="m-1 data-grid-icon" />
+                            </Template>
+                        </RadzenDataGridColumn>
+                    </Columns>
+                </RadzenDataGrid>
+            </RadzenStack>
+        </RadzenStack>
+        <RadzenStack Orientation="Orientation.Horizontal" class="text-end" JustifyContent="JustifyContent.End">
             <RadzenButton Text="Cancel" Click=OnCancel ButtonStyle="ButtonStyle.Light" Style="width: 120px" />
-        </div>
-    </div>
+            <RadzenButton Text=@(ToEdit.Id == Guid.Empty ? "Add" : "Update") ButtonType="ButtonType.Submit" ButtonStyle="ButtonStyle.Info"
+                          class="ml-4" />
+        </RadzenStack>
+    </RadzenStack>
 </RadzenTemplateForm>
+
+
+

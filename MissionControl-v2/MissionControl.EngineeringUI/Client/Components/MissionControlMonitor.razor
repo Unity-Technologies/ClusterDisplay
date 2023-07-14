@@ -1,0 +1,83 @@
+@using Unity.ClusterDisplay.MissionControl.EngineeringUI.Services
+@using Unity.ClusterDisplay.MissionControl.MissionControl
+@implements IDisposable
+@inject MissionControlStatusService MissionControlStatus;
+
+<RadzenPanel AllowCollapse="true" class="rz-my-4">
+    <HeaderTemplate>
+        <RadzenText Text="Mission Control" TextStyle="TextStyle.H5" Class="rz-m-0" />
+    </HeaderTemplate>
+    <ChildContent>
+        <RadzenText Text="Basic Info" TextStyle="TextStyle.H6" Class="rz-my-1" />
+        <RadzenRow>
+            <RadzenColumn Size="3">
+                <RadzenLabel Text="Version" />
+            </RadzenColumn>
+            <RadzenColumn>
+                <RadzenLabel Text=@MissionControlStatus.Version />
+            </RadzenColumn>
+        </RadzenRow>
+        <RadzenRow>
+            <RadzenColumn Size="3">
+                <RadzenLabel Text="Start Time" />
+            </RadzenColumn>
+            <RadzenColumn>
+                <RadzenLabel Text=@MissionControlStatus.StartTime.ToString() />
+            </RadzenColumn>
+        </RadzenRow>
+        <RadzenRow>
+            <RadzenColumn Size="3">
+                <RadzenLabel Text="Pending Restart" />
+            </RadzenColumn>
+            <RadzenColumn>
+                <RadzenLabel Text=@MissionControlStatus.PendingRestart.ToString() />
+            </RadzenColumn>
+        </RadzenRow>
+        <RadzenRow>
+            <RadzenColumn Size="3">
+                <RadzenLabel Text="State" />
+            </RadzenColumn>
+            <RadzenColumn>
+                <RadzenLabel Text=@(MissionControlStatus.State + " since " + MissionControlStatus.EnteredStateTime) />
+            </RadzenColumn>
+        </RadzenRow>
+        <RadzenText Text="Storage" TextStyle="TextStyle.H6" Class="rz-my-1" />
+        <RadzenDataGrid Data=@MissionControlStatus.StorageFolders>
+            <Columns>
+                <RadzenDataGridColumn TItem="MissionControl.StorageFolderStatus" Title="Path" Property="Path" />
+                <RadzenDataGridColumn TItem="MissionControl.StorageFolderStatus" Title="Current size">
+                    <Template Context="folder">
+                        @(ToGibibytes(folder.CurrentSize) + " GiB")
+                    </Template>
+                </RadzenDataGridColumn>
+                <RadzenDataGridColumn TItem="MissionControl.StorageFolderStatus" Title="Zombies size">
+                    <Template Context="folder">
+                        @(ToGibibytes(folder.ZombiesSize) + " GiB")
+                    </Template>
+                </RadzenDataGridColumn>
+                <RadzenDataGridColumn TItem="MissionControl.StorageFolderStatus" Title="Maximum size">
+                    <Template Context="folder">
+                        @(ToGibibytes(folder.MaximumSize) + " GiB")
+                    </Template>
+                </RadzenDataGridColumn>
+            </Columns>
+        </RadzenDataGrid>
+    </ChildContent>
+</RadzenPanel>
+
+@code {
+    protected override void OnInitialized()
+    {
+        base.OnInitialized();
+        MissionControlStatus.ObjectChanged += MissionControlStatusChanged;        
+    }
+
+    public void Dispose()
+    {
+        MissionControlStatus.ObjectChanged -= MissionControlStatusChanged;        
+    }
+
+    void MissionControlStatusChanged(ObservableObject _) => StateHasChanged();
+
+    static string ToGibibytes(long value) => (value / (double)(1024 * 1024 * 1024)).ToString("0.00");    
+}

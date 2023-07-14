@@ -2,73 +2,69 @@
 @using Unity.ClusterDisplay.MissionControl.MissionControl
 @using Unity.ClusterDisplay.MissionControl.EngineeringUI.Components
 
-<div class="row mb-1">
-    <div class="col-2 align-items-center d-flex">
-        <RadzenLabel Text="Asset" />
-    </div>
-    <div class="col-10">
-        <RadzenDropDownDataGrid AllowClear="true" Style="width: 100%" @ref="m_AssetsDropDown"
-                                @bind-Value=@LaunchConfigurationService.WorkValue.AssetId
-                                TValue="Guid" ValueProperty="Id" TextProperty="Name"
-                                Data=@AssetsService.Collection.Values
-                                FilterCaseSensitivity="FilterCaseSensitivity.CaseInsensitive"
-                                AllowFilteringByAllStringColumns="true"
-                                Disabled=@(MissionControlStatus.State != State.Idle)>
-            <Columns>
-                <RadzenDropDownDataGridColumn Property="Name" Title="Name" />
-                <RadzenDropDownDataGridColumn Property="Description" Title="Description" />
-            </Columns>
-        </RadzenDropDownDataGrid>
-    </div>
-</div>
-<div class="row mb-1">
-    <div class="col-2 align-items-start d-flex">
-        <RadzenLabel Text="Launch Complexes Configuration" />
-    </div>
-    <div class="col-10">
-        <RadzenDataGrid @ref="m_ComplexesGrid" Data=@Complexes.Collection.Values
-                        SelectionMode="DataGridSelectionMode.Single" @bind-Value=@m_SelectedLaunchComplexes>
-            <Columns>
-                <RadzenDataGridColumn TItem="LaunchComplex" Title="Name" Property="Name"/>
-                <RadzenDataGridColumn TItem="LaunchComplex" Title="Active Launchpads">
-                    <Template Context="complex">
-                        @GetActiveLaunchPads(complex.Id)
-                    </Template>
-                </RadzenDataGridColumn>
-            </Columns>
-        </RadzenDataGrid>
-        <RadzenButton Click=ConfigureLaunchComplex Text="Configure" Icon="settings" ButtonStyle="ButtonStyle.Primary"
-                      class="mt-2" Disabled=@(SelectedLaunchComplexes == null) />
-    </div>
-</div>
-<div class="row mb-1">
-    <div class="col-2 align-items-start d-flex">
-        <RadzenLabel Text="Global Parameters" />
-    </div>
-    <div class="col-10">
-        <LaunchParameters Parameters=@LaunchParameters Values=@LaunchParametersValue OnValuesUpdated=LaunchParametersValueUpdate />
-    </div>
-</div>
-<div class="row mb-1">
-    <div class="col-12">
-        @{
-            var needsPush = LaunchConfigurationService.WorkValueNeedsPush;
-            var hasAsset = LaunchConfigurationService.WorkValue.AssetId != Guid.Empty;
-        }
-        @if (MissionControlStatus.State == State.Idle)
+@{
+    var isRunning = MissionControlStatus.State != State.Idle;
+    var hasChanges = LaunchConfigurationService.WorkValue.Parameters.Any() ||
+        LaunchConfigurationService.WorkValue.LaunchComplexes.Any(c => c.Parameters.Any() || c.LaunchPads.Any(p => p.Parameters.Any()));
+    var applyAndSaveEnabled = !isRunning || !hasChanges;
+}
+
+<PageTitle>Configuration</PageTitle>
+<RadzenStack Orientation="Orientation.Horizontal" JustifyContent="JustifyContent.SpaceBetween" AlignItems="AlignItems.Center" class="page-title-row">
+    <RadzenText Text="Configuration" TextStyle="TextStyle.H4" />
+    <RadzenStack Orientation="Orientation.Horizontal">
+        <RadzenButton Text="Reset to default" Icon="refresh" Click=@ResetToDefault
+                      ButtonStyle="ButtonStyle.Light" Disabled=@(!hasChanges) />
+        @if (MissionsService.Collection.Any())
         {
-            <RadzenButton Text=@((needsPush && hasAsset)? "Apply & Launch" : "Launch") Icon="rocket_launch" Click=Launch
-                          Style="width: 200px" Class="me-1" Disabled=@(!hasAsset) />
+            <RadzenSplitButton Click=OnSaveClick Text=@("Save Snapshot")
+                           ButtonStyle="ButtonStyle.Info" Disabled=@(!applyAndSaveEnabled)>
+                <RadzenSplitButtonItem Text="Overwrite snapshot" />
+            </RadzenSplitButton>
         }
         else
         {
-            <RadzenButton Text="Stop" Icon="close" Click=Stop Style="width: 200px" Class="me-1" />
+            <RadzenButton Click=@(_ => SaveAs()) Text=@("Save Snapshot")
+                           ButtonStyle="ButtonStyle.Info" Disabled=@(!applyAndSaveEnabled) />
         }
-        <RadzenButton Text="Apply changes" Icon="send" Click=ApplyChanges
-                      ButtonStyle="ButtonStyle.Light" Style="width: 200px" Class="me-1"
-                      Disabled=@(!needsPush || MissionControlStatus.State != State.Idle)
-                      title=@(MissionControlStatus.State != State.Idle ? "Cannot apply changes while running" : "") />
-        <RadzenButton Text="Undo changes" Icon="undo" Click=UndoChanges
-                      ButtonStyle="ButtonStyle.Light" Style="width: 200px" Disabled=@(!needsPush) />
-    </div>
-</div>
+    </RadzenStack>
+</RadzenStack>
+
+<RadzenStack>
+    <RadzenLabel Text="Asset" />
+    <RadzenDropDownDataGrid AllowClear="true" Style="width: 100%" @ref="m_AssetsDropDown"
+                            @bind-Value=@LaunchConfigurationService.WorkValue.AssetId
+                            Change="@(args => OnSelectedAssetChanged())"
+                            TValue="Guid" ValueProperty="Id" TextProperty="Name"
+                            Data=@AssetsService.Collection.Values
+                            FilterCaseSensitivity="FilterCaseSensitivity.CaseInsensitive"
+                            AllowFilteringByAllStringColumns="true"
+                            Disabled=@(MissionControlStatus.State != State.Idle)>
+        <Columns>
+            <RadzenDropDownDataGridColumn Property="Name" Title="Name" />
+            <RadzenDropDownDataGridColumn Property="Description" Title="Description" />
+        </Columns>
+    </RadzenDropDownDataGrid>
+
+</RadzenStack>
+
+<RadzenText Text="Launch Complexes Configuration" Class="data-grid-header height-56 rz-border-base-300" TextStyle="TextStyle.DisplayH6" />
+<RadzenDataGrid @ref="m_ComplexesGrid" Data=@Complexes.Collection.Values
+                SelectionMode="DataGridSelectionMode.Single">
+    <Columns>
+        <RadzenDataGridColumn TItem="LaunchComplex" Title="Name" Property="Name" />
+        <RadzenDataGridColumn TItem="LaunchComplex" Title="Active Launchpads">
+            <Template Context="complex">
+                @GetActiveLaunchPads(complex.Id)
+            </Template>
+        </RadzenDataGridColumn>
+        <RadzenDataGridColumn TItem="LaunchComplex" Width="70px">
+            <Template Context="complex">
+                <RadzenButton Icon="settings" Click=@(() => ConfigureLaunchComplex(complex)) Class="m-1 data-grid-icon" ButtonStyle="ButtonStyle.Light" />
+            </Template>
+        </RadzenDataGridColumn>
+    </Columns>
+</RadzenDataGrid>
+
+<RadzenText Text="Global Parameters" Class="data-grid-header height-56 rz-border-base-300" TextStyle="TextStyle.DisplayH6" />
+<LaunchParameters Parameters="@LaunchParameters" Values="@LaunchParametersValue" OnValuesUpdated="LaunchParametersValueUpdate" />
