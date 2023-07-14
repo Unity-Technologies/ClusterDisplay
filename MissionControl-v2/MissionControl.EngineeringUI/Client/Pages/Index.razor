@@ -13,53 +13,33 @@
 
 <PageTitle>Welcome</PageTitle>
 
-<h1>Welcome to Mission Control</h1>
-<RadzenTextBox Placeholder="Some text HERE"/>
+<RadzenText TextStyle="TextStyle.H4">Welcome to Mission Control</RadzenText>
 
-If you are working on a brand new cluster, the first step will be to configure your devices (e.g. render nodes) using the
-<div class="row p-2 mx-0 my-1 rz-border-base-300 nav-button-look">
-    <div class="col align-items-center d-flex px-0">
-        <RadzenIcon Icon="view_cozy" class="me-3"/> Devices
-    </div>
+<div>
+    <RadzenText>
+        If you are working on a brand new cluster:
+    </RadzenText>
+    <ul>
+        <li>
+            <RadzenText>Configure your devices (e.g. render nodes) in <RadzenLink Icon="view_cozy" Path="/devices" Text="Devices" /></RadzenText>
+        </li>
+    </ul>
 </div>
-section in the menu on the left.
-<br /><br />
-Then you can:
-<ul>
-    <li>
-        Manage your assets (executable projects) using the
-        <div class="row p-2 mx-0 my-1 rz-border-base-300 nav-button-look">
-            <div class="col align-items-center d-flex px-0">
-                <RadzenIcon Icon="view_in_ar" class="me-3" /> Assets
-            </div>
-        </div>
-        section
-    </li>
-    <li>
-        Select the asset to launch, how to launch it and launch it using the
-        <div class="row p-2 mx-0 my-1 rz-border-base-300 nav-button-look">
-            <div class="col align-items-center d-flex px-0">
-                <RadzenIcon Icon="rocket_launch" class="me-3" /> Configuration
-            </div>
-        </div>
-        section
-    </li>
-    <li>
-        Save and load back launch configurations using the
-        <div class="row p-2 mx-0 my-1 rz-border-base-300 nav-button-look">
-            <div class="col align-items-center d-flex px-0">
-                <RadzenIcon Icon="photo_camera" class="me-3" /> Snapshots
-            </div>
-        </div>
-        section
-    </li>
-    <li>
-        Monitor the state of the different devices using the
-        <div class="row p-2 mx-0 my-1 rz-border-base-300 nav-button-look">
-            <div class="col align-items-center d-flex px-0">
-                <RadzenIcon Icon="monitor_heart" class="me-3" /> Monitoring
-            </div>
-        </div>
-        section
-    </li>
-</ul>
+
+<RadzenText>Then you can:</RadzenText>
+<div>
+    <ul>
+        <li>
+            <RadzenText>Manage your assets (executable projects) in <RadzenLink Icon="view_in_ar" Path="/assets" Text="Assets" /></RadzenText>
+        </li>
+        <li>
+            <RadzenText>Select the asset to launch and configure how to launch it in <RadzenLink Icon="rocket_launch" Path="/launch" Text="Configuration" /></RadzenText>
+        </li>
+        <li>
+            <RadzenText>Save and load back launch configuration in <RadzenLink Icon="photo_camera" Path="/missions" Text="Snapshots" /></RadzenText>
+        </li>
+        <li>
+            <RadzenText>Monitor the state of the different devices in <RadzenLink Icon="monitor_heart" Path="/monitor" Text="Monitoring" /></RadzenText>
+        </li>
+    </ul>
+</div>
