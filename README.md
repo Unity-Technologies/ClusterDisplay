@@ -6,15 +6,15 @@ The Unity Cluster Display solution allows multiple machines to display the same 
 
 The following guides will help you setup your project with cluster display:
 
-[Network Configuration](source/com.unity.cluster-display/Documentation~/network-configuration.md)
+1. Set up your physical network according to [Network Configuration](source/com.unity.cluster-display/Documentation~/network-configuration.md)
 
-[Setup Cluster Display with Existing Project](source/com.unity.cluster-display/Documentation~/setup-existing-project.md)
+2. [Setup Cluster Display with Existing Project](source/com.unity.cluster-display/Documentation~/setup-existing-project.md)
 
-[Setting up Quadro Sync](source/com.unity.cluster-display/Documentation~/quadro-sync.md)
+3. (Optional) [Set up Quadro Sync](source/com.unity.cluster-display/Documentation~/quadro-sync.md)
 
-[About Mission Control](MissionControl/README.md)
+4. [Setup Mission Control](MissionControl/README.md) to run your cluster content.
 
-[Sample Projects](source/com.unity.cluster-display/Documentation~/sample-projects.md)
+5. [Sample Projects](source/com.unity.cluster-display/Documentation~/sample-projects.md) can be found in the `TestProjects` directory.
 
 ## What is it for?
 
@@ -24,7 +24,7 @@ Note that Unity Cluster Display does not prevent the use of multiple displays pe
 
 ## Clustering and synchronization
 
-A Cluster Display setup typically consists of **one emitter node** and **several repeater nodes**:
+A Cluster Display setup typically consists of **one emitter node**, **several repeater nodes**, and optionally some number of **backup nodes**:
 
 * A single repeater node consists of a workstation and a display output.
   * Each workstation runs a copy of your Unity application with Cluster Display enabled.
@@ -32,10 +32,8 @@ A Cluster Display setup typically consists of **one emitter node** and **several
 * The emitter is responsible for synchronizing the state for all repeater nodes.
   * The repeater nodes connect to the emitter node via a **wired** Local Area Network.
   * The emitter node does not technically need to be connected to a display.
-
-### Licensing
-
-Making cluster-enabled builds with Unity requires a special license. [Contact a Unity sales representative](https://create.unity3d.com/unity-sales) for more information.
+* A backup node behaves like a repeater node except:
+  * When a failover is triggered, it will take over the role of an emitter or a repeater.
 
 ### Experimental packages
 
@@ -56,12 +54,13 @@ The packages required to set up Unity Cluster Display are currently available as
 
 ## Terminology
 
-| Word | Definition |
+| Word         | Definition      |
 |--------------|-----------------|
-| **Node** | A node is a workstation that runs as part of a cluster.|
-| **Cluster** | A cluster is a collection of nodes that collaborate to render a larger image. |
-| **Emitter** | A emitter is a special node in a cluster that controls and distributes the necessary information for repeaters to be able to render their sections of a larger image. |
+| **Node**     | A node is a workstation that runs as part of a cluster.|
+| **Cluster**  | A cluster is a collection of nodes that collaborate to render a larger image. |
+| **Emitter**  | A emitter is a special node in a cluster that controls and distributes the necessary information for repeaters to be able to render their sections of a larger image. |
 | **Repeater** | A repeater is a special node in a cluster that receives the necessary information from an emitter to render their section of a larger image. |
+| **Backup**   | A node that can take the place of an emitter or repeater when a failover condition is triggered. Needs to be launched at the same time as the rest of the cluster. |
 
 ## Send Us Your Logs!
 Include the **CLUSTER_DISPLAY_VERBOSE_LOGGING** scripting define symbol in the player settings to get verbose logging and send those logs to us if something is broken. You can find where those logs are located by reading this [page](https://docs.unity3d.com/Manual/LogFiles.html).

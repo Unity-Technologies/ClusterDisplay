@@ -1,14 +1,13 @@
 # Sample Projects
 
-## QuadroSyncTest
+## Spinning Cube
 
-This sample shows a spinning cube on a background with moving lines, while introducing random "freezes".
+This sample is included with the `com.unity.cluster-display.graphics` package and can be installed using the Package Manager. It shows a spinning cube on a background with moving lines.
 
 It tests the following features:
 * Network synchronization
 * Swap barriers (if Quadro Sync is present)
 * Time synchronization (spinning animation uses the Timeline)
-* Recovery from random hangs
 
 TODO: Screenshots, how to run
 
