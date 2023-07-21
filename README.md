@@ -2,6 +2,8 @@
 
 The Unity Cluster Display solution allows multiple machines to display the same Unity Scene synchronously through display clustering. This feature enables you, for example, to deploy your Unity project to large, multi-display configurations.
 
+
+
 ## Guides
 
 The following guides will help you setup your project with cluster display:
@@ -12,7 +14,7 @@ The following guides will help you setup your project with cluster display:
 
 3. (Optional) [Set up Quadro Sync](source/com.unity.cluster-display/Documentation~/quadro-sync.md)
 
-4. [Setup Mission Control](MissionControl/README.md) to run your cluster content.
+4. [Setup Mission Control](MissionControl-v2/README.md) to run your cluster content.
 
 5. [Sample Projects](source/com.unity.cluster-display/Documentation~/sample-projects.md) can be found in the `TestProjects` directory.
 
@@ -41,14 +43,14 @@ The packages required to set up Unity Cluster Display are currently available as
 
 ## Requirements
 
-* Requires Unity 2023.1+
+* Unity 2023.1 or newer
 * Windows 10
 
 ## Recommendations
 
-* Managed switch/router with access to [IGMP](https://en.wikipedia.org/wiki/Internet_Group_Management_Protocol) settings (See [Cluster Timesout After Period](troubleshooting.md)).
+* Managed switch/router with access to [IGMP](https://en.wikipedia.org/wiki/Internet_Group_Management_Protocol) settings (See [Cluster Times Out After Period](source/com.unity.cluster-display/Documentation~/troubleshooting.md#cluster-times-out-after-period)).
 * Choose a motherboard that supports [IPMI](https://en.wikipedia.org/wiki/Intelligent_Platform_Management_Interface) so you can remotely shutdown, restart and boot your nodes without needing physical access to the machines.
-* If your using Quadro Sync the following hardware is required:
+* If you are using Quadro Sync the following hardware is required:
   * Requires one or more [NVIDIA Quadro GPU](https://www.nvidia.com/en-us/design-visualization/quadro/)s.
   * Requires one or more [NVIDIA Quadro Sync II](https://www.nvidia.com/en-us/design-visualization/solutions/quadro-sync/) boards.
 
