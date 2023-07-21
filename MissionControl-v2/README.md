@@ -125,6 +125,6 @@ Assets (built scenes, games, levels, ... (depending how you want to call them)) 
 
 1) Go in the Configuration section (in the left menu)
 2) Select the asset in the list (at the top)
-3) Clip the Launch button (at the top-left)
+3) Click the Launch button (at the top-left)
 
 > ℹ️ _**Remarks:**_ Many options can be customized but the default ones should be good to allow launching of the asset.
