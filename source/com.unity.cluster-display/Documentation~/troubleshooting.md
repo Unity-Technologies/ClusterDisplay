@@ -30,7 +30,7 @@ Include the **CLUSTER_DISPLAY_VERBOSE_LOGGING** scripting define symbol in the p
 
 ![](images/verbose-logging.png)
 
-## Cluster Timesout After Period 
+## Cluster Times Out After Period 
 Routers & switches periodically propagate membership query to all members of a multicast group. This is done to determine whether a multicast group should expire or not. Some enterprise routers and switches will NOT do this by default and automatically expire multicast group after a period of time essentially preventing nodes inside the cluster from communicating with each other.
 
 In order to resolve this, you will need to configure your [IGMP](https://en.wikipedia.org/wiki/Internet_Group_Management_Protocol) settings in your router/switch so it will not expire those multicast groups. These settings are different for every switch manufacturer, so you will need to search your hardware's manual and settings interface for these settings.

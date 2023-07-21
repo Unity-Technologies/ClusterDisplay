@@ -37,4 +37,4 @@ This guide describes how to enable Cluster Display in an existing Unity project.
 
     ![Run in background](images/run-in-background.png)
 
-6. To run your Cluster Display-enabled game, create a standalone build and follow the directions for Mission Control (docs pending).
+6. To run your Cluster Display-enabled game, create a standalone build and follow the directions for Mission Control (consult the guide in the `MissionControl-v2` directory).

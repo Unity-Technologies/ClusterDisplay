@@ -2,7 +2,7 @@
 
 ## Tiled
 
-The camera frustum is divided into a rectangular grid.
+The camera frustum is divided into a rectangular grid. You can read more about how this works [here](./tile-concepts.md)
 
 ![](images/grid-demo.gif)
 
