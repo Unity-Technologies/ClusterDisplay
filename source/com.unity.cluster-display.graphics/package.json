@@ -1,20 +1,17 @@
 {
   "name": "com.unity.cluster-display.graphics",
-  "version": "0.0.1-preview",
+  "version": "0.1.0-preview",
   "displayName": "Cluster Display Graphics",
-  "description": "A toolkit providing rendering features for cluster display, such as asymmetric projection and overscan.",
-  "unity": "2020.1",
+  "description": "A toolkit providing rendering features for Cluster Display, such as non-standard projections and overscan.",
+  "unity": "2023.1",
   "keywords": [
     "cluster rendering",
     "distributed rendering",
     "cluster graphics",
     "cluster"
   ],
-  "author": {
-    "name": "Unity"
-  },
   "dependencies": {
-    "com.unity.cluster-display": "0.0.3-preview"
+    "com.unity.cluster-display": "0.1.0-preview"
   },
   "samples": [
     {
