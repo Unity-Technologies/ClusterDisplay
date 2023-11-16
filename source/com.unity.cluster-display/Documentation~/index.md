@@ -51,5 +51,3 @@ Include the **CLUSTER_DISPLAY_VERBOSE_LOGGING** scripting define symbol in the p
 | [Setup Cluster Display with Existing Project](source/com.unity.cluster-display/Documentation~/setup-existing-project.md) | Set-up an existing project.                                           |
 | [Set up Quadro Sync](source/com.unity.cluster-display/Documentation~/quadro-sync.md)                                     | Instruction to set-up a Quadro sync (Optional).                       |
 | [Setup Mission Control](MissionControl-v2/README.md)                                                                     | Set-up Mission Control to run your cluster content..                  |
-
-T
