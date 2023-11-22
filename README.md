@@ -1,70 +1,63 @@
-# Cluster Display
+# Cluster Display for Unity Editor
 
-The Unity Cluster Display solution allows multiple machines to display the same Unity Scene synchronously through display clustering. This feature enables you, for example, to deploy your Unity project to large, multi-display configurations.
+Use the Unity Cluster Display packages (`com.unity.cluster-display`) to display synchronously the same Unity Scene across multiple machines through display clustering.
 
+This repository contains all packages, resources and sample projects related with Unity Cluster Display.
 
+## Get started
 
-## Guides
+To learn about the Unity Cluster Display package (concepts, features, and workflows) read the [Cluster Display package documentation](source/com.unity.cluster-display/Documentation~/index.md) in this repository.  
 
-The following guides will help you setup your project with cluster display:
-
-1. Set up your physical network according to [Network Configuration](source/com.unity.cluster-display/Documentation~/network-configuration.md)
-
-2. [Setup Cluster Display with Existing Project](source/com.unity.cluster-display/Documentation~/setup-existing-project.md)
-
-3. (Optional) [Set up Quadro Sync](source/com.unity.cluster-display/Documentation~/quadro-sync.md)
-
-4. [Setup Mission Control](MissionControl-v2/README.md) to run your cluster content.
-
-5. [Sample Projects](source/com.unity.cluster-display/Documentation~/sample-projects.md) can be found in the `TestProjects` directory.
-
-## What is it for?
-
-In practice, you could use a single machine to render to multiple displays and/or high resolution displays (4K+), but the machine's computational power might present a limit to this approach. With Unity Cluster Display, you can scale up to an arbitrary number of machines, therefore an arbitrary number of displays: Unity Cluster Display currently supports up to 64 nodes. However, if you need to increase this number, it is technically possible.
-
-Note that Unity Cluster Display does not prevent the use of multiple displays per machine. The total number of pixels a machine can render to depends both on its hardware capabilities and the user project's complexity.
-
-## Clustering and synchronization
-
-A Cluster Display setup typically consists of **one emitter node**, **several repeater nodes**, and optionally some number of **backup nodes**:
-
-* A single repeater node consists of a workstation and a display output.
-  * Each workstation runs a copy of your Unity application with Cluster Display enabled.
-  * All the nodes run the same interactive content in lockstep, but each one only renders a subsection of the total display surface.
-* The emitter is responsible for synchronizing the state for all repeater nodes.
-  * The repeater nodes connect to the emitter node via a **wired** Local Area Network.
-  * The emitter node does not technically need to be connected to a display.
-* A backup node behaves like a repeater node except:
-  * When a failover is triggered, it will take over the role of an emitter or a repeater.
-
-### Experimental packages
-
-The packages required to set up Unity Cluster Display are currently available as experimental packages, so they are not ready for production use. The features and documentation in these packages will change before they are verified for release.
-
-## Requirements
+### Requirements
 
 * Unity 2023.1 or newer
 * Windows 10
 
-## Recommendations
+### Check out the licensing model
 
-* Managed switch/router with access to [IGMP](https://en.wikipedia.org/wiki/Internet_Group_Management_Protocol) settings (See [Cluster Times Out After Period](source/com.unity.cluster-display/Documentation~/troubleshooting.md#cluster-times-out-after-period)).
-* Choose a motherboard that supports [IPMI](https://en.wikipedia.org/wiki/Intelligent_Platform_Management_Interface) so you can remotely shutdown, restart and boot your nodes without needing physical access to the machines.
-* If you are using Quadro Sync the following hardware is required:
-  * Requires one or more [NVIDIA Quadro GPU](https://www.nvidia.com/en-us/design-visualization/quadro/)s.
-  * Requires one or more [NVIDIA Quadro Sync II](https://www.nvidia.com/en-us/design-visualization/solutions/quadro-sync/) boards.
+The Cluster Display package is licensed under the [Apache License, Version 2.0](LICENSE.md).
 
-## Terminology
+### Contribution and maintenance
 
-| Word         | Definition      |
-|--------------|-----------------|
-| **Node**     | A node is a workstation that runs as part of a cluster.|
-| **Cluster**  | A cluster is a collection of nodes that collaborate to render a larger image. |
-| **Emitter**  | A emitter is a special node in a cluster that controls and distributes the necessary information for repeaters to be able to render their sections of a larger image. |
-| **Repeater** | A repeater is a special node in a cluster that receives the necessary information from an emitter to render their section of a larger image. |
-| **Backup**   | A node that can take the place of an emitter or repeater when a failover condition is triggered. Needs to be launched at the same time as the rest of the cluster. |
+We appreciate your interest in contributing to the Unity OSC Protocol Support package.  
+It's important to note that **this package is provided as is, without any maintenance or release plan.**  
+Therefore, we are unable to monitor bug reports, accept feature requests, or review pull requests for this package.
 
-## Send Us Your Logs!
-Include the **CLUSTER_DISPLAY_VERBOSE_LOGGING** scripting define symbol in the player settings to get verbose logging and send those logs to us if something is broken. You can find where those logs are located by reading this [page](https://docs.unity3d.com/Manual/LogFiles.html).
+However, we understand that users may want to make improvements to the package.  
+In that case, we recommend that you fork the repository. This will allow you to make changes and enhancements as you see fit.
 
-![Verbose Logging](source/com.unity.cluster-display/Documentation~/images/verbose-logging.png)
+## Cluster Display packages and projects
+
+### Access the Cluster Display package folders
+
+| Package | Description |
+|:---|:---|
+| **[com.unity.cluster-display](source/com.unity.cluster-display)** | The core Cluster Display package which allows Unity applications to run on multiple machines and simulate the same scene in-sync with each other. |
+| **[com.unity.cluster-display.graphics](source/com.unity.cluster-display.graphics)** | Package that contains a toolkit providing rendering features for Cluster Display, such as non-standard projections and overscan. |
+| **[com.unity.cluster-display.rpc](source/com.unity.cluster-display.rpc)** | Package that allows making builds that run on multiple machines and simulate the same scene in-sync with each other. |
+
+### Test the Cluster Display package
+
+Use these sample projects to manually test the Cluster Display solution in different contexts:
+
+| Project | Description |
+|:---|:---|
+| **[ClusterRenderTest](TestProjects/ClusterRenderTest)** | Unity project to test a cluster render. |
+| **[ClusterSyncTest](TestProjects/ClusterSyncTests)** | Unity project to test a cluster sync. |
+| **[GraphicsDemoProject](TestProjects/GraphicsDemoProject)** | Unity project to test Cluster Display with graphics. |
+| **[GraphicsTestsHDRP](TestProjects/GraphicsTestsHDRP)** | Unity project to test Cluster Display with graphics in HDRP. |
+| **[GraphicsTestsURP](TestProjects/GraphicsTestsURP)** | Unity project to test Cluster Display with graphics in URP. |
+| **[LiveEditingTests](TestProjects/LiveEditingTests)** | Unity project to test Cluster Display and live editing. |
+| **[MissionControlTests](TestProjects/MissionControlTests)** | Unity project to test Cluster Display with Mission Control. |
+| **[Mosys](TestProjects/Mosys)** | Unity project to test Cluster Display with Mosys. |
+| **[QuadroSyncTest](TestProjects/QuadroSyncTest)** | Unity project to test Cluster Display with a QuadroSync board. |
+| **[RPCTests](TestProjects/RPCTests)** | Unity project to test Cluster Display with RPC. |
+| **[VirtualCameraTest](TestProjects/VirtualCameraTest)** | Unity project to test Cluster Display with a Virtual Camera. |
+
+See also [Sample Projects](source/com.unity.cluster-display/Documentation~/sample-projects.md) page for more details.
+
+## Cluster Display Mission Control
+
+Use [Cluster Display Mission Control](MissionControl-v2) to
+* Manage multiple computers working together to form a Cluster Display.
+* Load, start and stop executables built with Unity for display on the clustered screens.
