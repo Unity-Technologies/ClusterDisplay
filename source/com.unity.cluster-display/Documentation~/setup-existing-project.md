@@ -5,6 +5,7 @@ This guide describes how to enable Cluster Display in an existing Unity project.
 > **_NOTE:_** Cluster Display rendering requires URP or HDRP 14.0.3 or newer.
 
 1. Navigate to your project's **Packages\manifest.json**.
+
 2. Add the cluster display packages:
 
     ```json
@@ -37,4 +38,4 @@ This guide describes how to enable Cluster Display in an existing Unity project.
 
     ![Run in background](images/run-in-background.png)
 
-6. To run your Cluster Display-enabled game, create a standalone build and follow the directions for Mission Control (consult the guide in the `MissionControl-v2` directory).
+6. To run your Cluster Display-enabled game, create a standalone build and follow the directions for [Mission Control](mission-control.md).

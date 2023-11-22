@@ -1,6 +1,8 @@
-# About Unity.ClusterDisplay.Graphics
+# Unity Cluster Display Graphics package
 
-This package is used in conjunction with Unity.ClusterDisplay to control how your scene is rendered across multiple displays. See the repository [README](../../../README.md) for general information, installation, and usage of Cluster Display.
+This package is used in conjunction with the main `cluster-display` package to control how your scene is rendered across multiple displays.
+
+See the [documentation](../../../source/com.unity.cluster-display/Documentation~/index.md) for general information, installation, and use of Cluster Display.
 
 ## Requirements
 

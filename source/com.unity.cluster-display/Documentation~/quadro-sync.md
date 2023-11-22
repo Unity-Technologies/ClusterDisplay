@@ -1,4 +1,6 @@
-# Quadro Sync
+[Contents](TableOfContents.md) | [Home](index.md) > Quadro Sync setup
+
+# Quadro Sync setup
 
 NVIDIA's NvAPI provides the capability to synchronize the buffer swaps of a group of DirectX swap chains when using Quadro Sync II boards. This extension also provides the capability to synchronize the buffer swaps of different swaps groups, which may reside on distributed systems on a network using a swap barrier. It’s essential to coordinate the back buffer swap between nodes, so it can stay perfectly synchronized (Frame Lock + Genlock) for a large number of displays.
 

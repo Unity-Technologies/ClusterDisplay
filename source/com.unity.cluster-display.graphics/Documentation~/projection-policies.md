@@ -11,7 +11,7 @@ The camera frustum is divided into a rectangular grid. You can read more about h
 The camera frustum is projected onto the specified geometry. Use this projection to generate a perspective-correct view
 on a curved display surface (e.g. LED wall).
 
-![](images/mesh-warp.gif)
+![Mesh warp projection can be used for doing in-camera VFX on LED walls](images/mesh-warp.gif)
 
 ## Tracked Perspective
 

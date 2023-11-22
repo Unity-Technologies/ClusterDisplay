@@ -1,3 +1,5 @@
+[Contents](TableOfContents.md) | [Home](index.md) > Network configuration
+
 # Network Configuration
 
 Set up your Cluster Display Hardware elements according to the following
