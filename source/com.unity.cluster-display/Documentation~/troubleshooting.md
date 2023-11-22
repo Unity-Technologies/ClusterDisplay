@@ -1,3 +1,5 @@
+[Contents](TableOfContents.md) | [Home](index.md) > Troubleshooting
+
 # Troubleshooting
 - [Troubleshooting](#troubleshooting)
   - [Screen is Black in URP](#screen-is-black-in-urp)

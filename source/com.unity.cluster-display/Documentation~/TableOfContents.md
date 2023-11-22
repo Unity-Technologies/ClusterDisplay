@@ -5,7 +5,7 @@
 * [Network configuration](network-configuration.md)
 * [Setup with existing project](setup-existing-project.md)
 * [Quadro Sync setup](quadro-sync.md)
-* [Sample Projects](sample-projects)
+* [Sample Projects](sample-projects.md)
   * [Spinning cube](sample-projects-spinning-cube.md)
   * [MoSys](sample-projects-mosys.md)
   * [Virtual Camera test](sample-projects-virtual-camera.md)

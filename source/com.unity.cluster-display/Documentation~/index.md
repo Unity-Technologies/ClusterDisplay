@@ -12,7 +12,7 @@ Use the Unity Cluster Display package to create and build Unity projects that yo
 | [Network Configuration](network-configuration.md) | Set up your physical network according to your network configuration. |
 | [Set up an existing project](setup-existing-project.md) | Enable Cluster Display in an existing Unity project. |
 | [Quadro Sync setup](quadro-sync.md) | Quadro sync setup instructions to get perfect synchronization (Frame Lock + Genlock) between all displays (Optional). |
-| [Sample Projects](sample-projects) | Use Unity demo projects to try out the Cluster Display features in various contexts. |
+| [Sample Projects](sample-projects.md) | Use Unity demo projects to try out the Cluster Display features in various contexts. |
 | [Mission Control setup](mission-control.md) | Set up the Mission Control app to manage your cluster and run your built project on it. |
 | [Troubleshooting](troubleshooting.md) | Solve common issues you might experience with Cluster Display. |
 
