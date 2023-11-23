@@ -1,3 +1,5 @@
+[Contents](TableOfContents.md) | [Home](index.md) > [Cluster Display concepts](concepts.md) > Cluster Display Synchronization
+
 # Cluster Display Synchronization
 
 ## Synchronization method – Lockstep

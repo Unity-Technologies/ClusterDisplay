@@ -32,7 +32,7 @@ This guide describes how to enable Cluster Display in an existing Unity project.
 
     - In **Player > Other Settings > Configuration**, enable the **Use Incremental GC** option (checkbox) to help avoiding framerate jitters caused by [garbage collection](https://blogs.unity3d.com/2018/11/26/feature-preview-incremental-garbage-collection/).
 
-    - In **Player > Resolution and Presentation > Resolution**, set **Fullscreen Mode** to **FullScreen Window** (see [Standalone Player Settings](https://docs.unity3d.com/Manual/class-PlayerSettingsStandalone.html) for more details).
+    - In **Player > Resolution and Presentation > Resolution**, set **Fullscreen Mode** to **FullScreen Window** (see [Standalone Player Settings](https://docs.unity3d.com/Manual/playersettings-windows.html) for more details).
 
     ![Fullscreen Exclusive](images/fullscreen-window.png)
 

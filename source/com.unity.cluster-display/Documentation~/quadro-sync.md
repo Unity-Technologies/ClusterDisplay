@@ -67,7 +67,7 @@ Notice that the camera cuts **are perfectly synchronized** across the cluster.
 
     ![Connection diagram](images/connection-diagram.png)
 
-8. Configure synchronized Quadro frame presentation to "wait before presenting next frame" as opposed to "wait for presenting of current frame to be done".  It allows the get a better frame rate by starting to work on the next frame while Quadro Sync is waiting for all nodes to be ready to present the frame.  This should normally be done automatically by [Mission Control installation](../../../MissionControl/README.md) but if you are not using it or want to do it manually, execute [Nvidia's Configure Driver Utility](https://www.nvidia.com/en-us/drivers/driver-utility/) in administrative mode and select option 11.
+8. Configure synchronized Quadro frame presentation to "wait before presenting next frame" as opposed to "wait for presenting of current frame to be done".  It allows the get a better frame rate by starting to work on the next frame while Quadro Sync is waiting for all nodes to be ready to present the frame.  This should normally be done automatically by [Mission Control installation](mission-control.md) but if you are not using it or want to do it manually, execute [Nvidia's Configure Driver Utility](https://www.nvidia.com/en-us/drivers/driver-utility/) in administrative mode and select option 11.
 
    ![configureDriver.exe](images/configureDriver-Utility.png)
 

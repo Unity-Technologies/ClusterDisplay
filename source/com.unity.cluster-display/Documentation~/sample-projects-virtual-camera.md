@@ -42,7 +42,7 @@ The game is now ready to build and run.
 
 ### Running the Demo
 
-Run the standalone player according to the instructions given in the [Cluster Deployment](cluster-operation.md) doc, or using [Mission Control](../../../MissionControl/README.md).
+Run the standalone player using [Mission Control](mission-control.md).
 
 Build and run customized Virtual Camera app on a supported iOS device. Connect to the emitter host. Point the camera at the marker image until the 3D axes appear (this could take a few seconds). You should now see the game responding to movements of the phone.
 

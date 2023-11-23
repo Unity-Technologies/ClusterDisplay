@@ -23,14 +23,6 @@ A Cluster Display setup typically consists of **one emitter node**, **several re
 
 For more details, see [Cluster Display synchronization](synchronization.md).
 
-## Recommendations
-
-* Managed switch/router with access to [IGMP](https://en.wikipedia.org/wiki/Internet_Group_Management_Protocol) settings (See [Cluster Times Out After Period](source/com.unity.cluster-display/Documentation~/troubleshooting.md#cluster-times-out-after-period)).
-* Choose a motherboard that supports [IPMI](https://en.wikipedia.org/wiki/Intelligent_Platform_Management_Interface) so you can remotely shutdown, restart and boot your nodes without needing physical access to the machines.
-* If you are using Quadro Sync the following hardware is required:
-    * Requires one or more [NVIDIA Quadro GPU](https://www.nvidia.com/en-us/design-visualization/quadro/)s.
-    * Requires one or more [NVIDIA Quadro Sync II](https://www.nvidia.com/en-us/design-visualization/solutions/quadro-sync/) boards.
-
 ## Terminology
 
 | Word         | Definition      |
