@@ -10,13 +10,13 @@ Cluster Display Graphics depends on URP or HDRP 14.0.3 (Unity 2022.2 and above).
 
 ## Using Unity.ClusterDisplay.Graphics
 
-Cluster Display Graphics features are enabled by adding an instance of the `ClusterRenderer` component to your scene. This component allows you to define a **Projection Policy**. See [this doc](./projection-policies.md) for more details on the various projection policies.
+Cluster Display Graphics features are enabled by adding an instance of the `ClusterRenderer` component to your scene. This component allows you to define a **Projection Policy**.
 
 ## Cluster Rendering Projection Policies
 
 ### Tiled
 
-The camera frustum is divided into a rectangular grid. Learn more about [Tiled Projections](#tiled-projection-concepts.md)
+The camera frustum is divided into a rectangular grid. Learn more about [Tiled Projections](#tiled-projection-concepts)
 
 ![](images/grid-demo.gif)
 
@@ -108,5 +108,3 @@ Let's consider Bloom for example, in the capture below, bloom works with oversca
 However, if we use a high *scatter* value, artefacts become apparent despite overscan:
 
 ![Bloom](images/bloom_highscatter.png)
-
-**Volumetric lighting** is still under investigation and updates will be provided later.
