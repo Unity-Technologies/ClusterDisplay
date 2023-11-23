@@ -1,7 +1,7 @@
 [Contents](TableOfContents.md) | [Home](index.md) > Troubleshooting
 
 # Troubleshooting
-- [VFX Graph Particles - reseed issues](#vfx-graph-particles–reseed-issues)
+- [VFX Graph Particles - reseed issues](#vfx-graph-particles-reseed-issues)
 - [Screen is Black in URP](#screen-is-black-in-urp)
 - [QuadroSync is not Working](#quadrosync-is-not-working)
 - [I Need to Debug Something](#i-need-to-debug-something)
