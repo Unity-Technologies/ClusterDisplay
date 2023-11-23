@@ -1,3 +1,9 @@
+# Cluster Display RPC support (package concepts)
+
+This package is used in conjunction with the main `cluster-display` package to support Remote Procedural Calls (RPCs) in your projects.
+
+See the [Cluster Display documentation](../../../source/com.unity.cluster-display/Documentation~/index.md) for general information, installation, and use of Cluster Display.
+
 # Network Events
 Cluster Display has a multicast UDP general networking library with the following features:
 - Remote Procedural Call (RPC) support.
