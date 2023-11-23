@@ -1,14 +1,14 @@
 [Contents](TableOfContents.md) | [Home](index.md) > Troubleshooting
 
 # Troubleshooting
-- [VFX Graph Particles – reseed issues](#vfx-graph-particles–reseed-issues)
+- [VFX Graph Particles - reseed issues](#vfx-graph-particles–reseed-issues)
 - [Screen is Black in URP](#screen-is-black-in-urp)
 - [QuadroSync is not Working](#quadrosync-is-not-working)
 - [I Need to Debug Something](#i-need-to-debug-something)
 - [Cluster Timesout After Period](#cluster-timesout-after-period)
 - [Post-processing effects don't look right in the player when using Tiled Projection Policy](#post-processing-effects-dont-look-right-in-the-player-when-using-tiled-projection-policy)
 
-## VFX Graph Particles – reseed issues
+## VFX Graph Particles - reseed issues
 
 If you are using VFX Graph Particles effects in HDRP, make sure to *disable* the **Reseed on play** option (checkbox) on the **VisualEffect** component, otherwise each node may end up with differently seeded random number generators, leading to visual artefacts.
 
