@@ -1,3 +1,5 @@
+[Contents](TableOfContents.md) | [Home](index.md) > Use an Existing Project with Cluster Display
+
 # Quick Start: Use an Existing Project with Cluster Display
 
 This guide describes how to enable Cluster Display in an existing Unity project.
@@ -5,6 +7,7 @@ This guide describes how to enable Cluster Display in an existing Unity project.
 > **_NOTE:_** Cluster Display rendering requires URP or HDRP 14.0.3 or newer.
 
 1. Navigate to your project's **Packages\manifest.json**.
+
 2. Add the cluster display packages:
 
     ```json
@@ -29,7 +32,7 @@ This guide describes how to enable Cluster Display in an existing Unity project.
 
     - In **Player > Other Settings > Configuration**, enable the **Use Incremental GC** option (checkbox) to help avoiding framerate jitters caused by [garbage collection](https://blogs.unity3d.com/2018/11/26/feature-preview-incremental-garbage-collection/).
 
-    - In **Player > Resolution and Presentation > Resolution**, set **Fullscreen Mode** to **FullScreen Window** (see [Standalone Player Settings](https://docs.unity3d.com/Manual/class-PlayerSettingsStandalone.html) for more details).
+    - In **Player > Resolution and Presentation > Resolution**, set **Fullscreen Mode** to **FullScreen Window** (see [Standalone Player Settings](https://docs.unity3d.com/Manual/playersettings-windows.html) for more details).
 
     ![Fullscreen Exclusive](images/fullscreen-window.png)
 
@@ -37,4 +40,4 @@ This guide describes how to enable Cluster Display in an existing Unity project.
 
     ![Run in background](images/run-in-background.png)
 
-6. To run your Cluster Display-enabled game, create a standalone build and follow the directions for Mission Control (consult the guide in the `MissionControl-v2` directory).
+6. To run your Cluster Display-enabled game, create a standalone build and follow the directions for [Mission Control](mission-control.md).

@@ -1,13 +1,19 @@
+# Cluster Display RPC support (package concepts)
+
+This package is used in conjunction with the main `cluster-display` package to support Remote Procedural Calls (RPCs) in your projects.
+
+See the [Cluster Display documentation](../../../source/com.unity.cluster-display/Documentation~/index.md) for general information, installation, and use of Cluster Display.
+
 # Network Events
 Cluster Display has a multicast UDP general networking library with the following features:
-- RPC (Remote Procedural Call) support.
+- Remote Procedural Call (RPC) support.
   - Primitive method parameters such as float, int, byte, etc.
   - Struct or valuetype method parameters.
   - Array method parameters.
   - string method parameters.
 
-# RPCs (Remote Procedure Calls)
-[RPCs](https://en.wikipedia.org/wiki/Remote_procedure_call) are a common networking pattern for propgating network events and for Cluster Display we use them extensively. In Cluster Display's networking implementation you can flag a method to be an RPC using two different approaches:
+# Remote Procedure Calls (RPCs)
+[RPCs](https://en.wikipedia.org/wiki/Remote_procedure_call) are a common networking pattern for propagating network events and for Cluster Display we use them extensively. In Cluster Display's networking implementation you can flag a method to be an RPC using two different approaches:
 - Cluster Display Inspector UI **(Only available in com.unity.cluster-dislay.helpers)**
 - **[ClusterRPC]** C# attribute.
 
@@ -90,7 +96,7 @@ All [C# primitive types](!https://docs.microsoft.com/en-us/dotnet/csharp/languag
 public void TestMethod (float valueA, int valueB) {}
 ```
 ### Boolean Method Arguments
-C# `Boolean` types are supported. However, in managed memory they are considered as 1 byte. Whereas when they are marshalled by `Marshal` they are implicitly converted into 4 bytes. Therefore `bool` arguments are communicated as 4 bytes to to the repater nodes. If you really need `bool` arguments to be communicated as 1 bytes you can wrap it in a struct and setup the struct in the following way: [Struct Boolean Field Members](network-events#struct-boolean-field-members)
+C# `Boolean` types are supported. However, in managed memory they are considered as 1 byte. Whereas when they are marshalled by `Marshal` they are implicitly converted into 4 bytes. Therefore `bool` arguments are communicated as 4 bytes to to the repater nodes. If you really need `bool` arguments to be communicated as 1 bytes you can wrap it in a struct and setup the struct in the following way: [Struct Boolean Field Members](#struct-boolean-field-members)
 
 ### Struct & ValueType Method Arguments
 [C# structs](!https://docs.microsoft.com/en-us/dotnet/csharp/language-reference/builtin-types/struct) can be used as RPC parameters as long as **all** of the struct members and nested members are primitive types:
@@ -109,7 +115,7 @@ public struct ContainerType
 
     // Nested struct instances are supported.
     [FieldOffset(8)] public Vector3 vector; // Common Unity structs are supported.
-    [FieldOffset(20)] public NestedContainerType nested; // Custom structs are supported. 
+    [FieldOffset(20)] public NestedContainerType nested; // Custom structs are supported.
 }
 
 [ClusterRPC]
@@ -151,7 +157,7 @@ public struct ContainerType
 
     // Nested struct instances are supported.
     [FieldOffset(8)] public Vector3 vector; // Common Unity structs are supported.
-    [FieldOffset(20)] public NestedContainerType nested; // Custom structs are supported. 
+    [FieldOffset(20)] public NestedContainerType nested; // Custom structs are supported.
 }
 
 [ClusterRPC]

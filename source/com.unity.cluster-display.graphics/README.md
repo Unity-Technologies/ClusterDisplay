@@ -1,7 +1,9 @@
-# Unity Cluster Display Graphics
+# Unity Cluster Display Graphics package
 
-![Mesh warp projection can be used for doing in-camera VFX on LED walls](Documentation~/images/mesh-warp.gif)
+This package includes a toolkit providing rendering features for Cluster Display, such as non-standard projections and overscan. It must be used in conjunction with the main Cluster Display package.
 
-This package is used in conjunction with Unity.ClusterDisplay to control how your scene is rendered across multiple displays.
+See the [Cluster Display documentation](../../source/com.unity.cluster-display/Documentation~/index.md) for general information, installation, and use of Cluster Display.
 
-For more information, see the [package documentation](Documentation~/index.md)
+Review the specific [license terms](LICENSE.md) about this package.
+
+>**Note:** If you need more specific information about the Unity Cluster Display Graphics package, see [projection policies and tiles concepts](Documentation~/index.md).
