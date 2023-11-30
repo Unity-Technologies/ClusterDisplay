@@ -902,7 +902,7 @@ MonoBehaviour:
     1. Create a standalone Windows build.
 
     2. Set up
-    Mission Control and launch your build according to the instructions in {path/to/ClusterDisplay}/MissionControl-v2/README.md
+    Mission Control and launch your build according to the instructions in {path/to/ClusterDisplay}/MissionControlApp/README.md
 
 
 
