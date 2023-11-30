@@ -8,18 +8,18 @@ message("CXX flags: ${CMAKE_CXX_FLAGS}")
 
 # base files
 set( QUADROSYNC_WRAPPER_PUBLIC_HEADERS
-	../External/NvAPI/nvapi.h
-	../External/NvAPI/nvapi_lite_common.h
-	../External/NvAPI/nvapi_lite_d3dext.h
-	../External/NvAPI/nvapi_lite_salend.h
-	../External/NvAPI/nvapi_lite_salstart.h
-	../External/NvAPI/nvapi_lite_sli.h
-	../External/NvAPI/nvapi_lite_stereo.h
-	../External/NvAPI/nvapi_lite_surround.h
-	../External/NvAPI/NvApiDriverSettings.h
-	../External/NvAPI/nvHLSLExtns.h
-	../External/NvAPI/nvHLSLExtnsInternal.h
-	../External/NvAPI/nvShaderExtnEnums.h
+	External/NvAPI/nvapi.h
+	External/NvAPI/nvapi_lite_common.h
+	External/NvAPI/nvapi_lite_d3dext.h
+	External/NvAPI/nvapi_lite_salend.h
+	External/NvAPI/nvapi_lite_salstart.h
+	External/NvAPI/nvapi_lite_sli.h
+	External/NvAPI/nvapi_lite_stereo.h
+	External/NvAPI/nvapi_lite_surround.h
+	External/NvAPI/NvApiDriverSettings.h
+	External/NvAPI/nvHLSLExtns.h
+	External/NvAPI/nvHLSLExtnsInternal.h
+	External/NvAPI/nvShaderExtnEnums.h
 )
 
 set( QUADROSYNC_WRAPPER_PROJECT_HEADERS
@@ -46,7 +46,7 @@ set( QUADROSYNC_WRAPPER_SOURCES
 
 INCLUDE_DIRECTORIES(
    "Unity"
-   "../External/NvAPI"
+   "External/NvAPI"
    "Includes"
 	include
 )
@@ -70,7 +70,7 @@ set( QUADROSYNC_WRAPPER_DEPENDENCIES
 )
 
 target_link_directories(${PROJECT_NAME} PUBLIC
-	"../External/NvAPI/amd64"
+	"External/NvAPI/amd64"
 )
 
 target_link_libraries( ${PROJECT_NAME}
