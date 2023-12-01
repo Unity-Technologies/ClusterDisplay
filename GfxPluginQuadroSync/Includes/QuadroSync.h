@@ -1,6 +1,6 @@
 #pragma once
 
-#include "../../External/NvAPI/nvapi.h"
+#include "../External/NvAPI/nvapi.h"
 #include "../Unity/IUnityInterface.h"
 
 #include <atomic>

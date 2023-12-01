@@ -2,7 +2,7 @@
 
 #include <sstream>
 
-#include "../../External/NvAPI/nvapi_lite_common.h"
+#include "../External/NvAPI/nvapi_lite_common.h"
 #include "../Unity/IUnityInterface.h"
 
 namespace GfxQuadroSync
