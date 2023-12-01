@@ -5,7 +5,7 @@ on:
     branches:
       - 'dev'
     paths:
-      - 'MissionControl-v2/**'
+      - 'MissionControlSystem/**'
       - 'source/com.unity.cluster-display/Runtime/MissionControl/Shared/IIncrementalCollectionObject.cs'
       - 'source/com.unity.cluster-display/Runtime/MissionControl/Shared/IncrementalCollection.cs'
       - 'source/com.unity.cluster-display/Runtime/MissionControl/Shared/IncrementalCollectionObjectData.cs'
@@ -21,7 +21,7 @@ on:
     branches:
       - 'dev'
     paths:
-      - 'MissionControl-v2/**'
+      - 'MissionControlSystem/**'
       - 'source/com.unity.cluster-display/Runtime/MissionControl/Shared/IIncrementalCollectionObject.cs'
       - 'source/com.unity.cluster-display/Runtime/MissionControl/Shared/IncrementalCollection.cs'
       - 'source/com.unity.cluster-display/Runtime/MissionControl/Shared/IncrementalCollectionObjectData.cs'
@@ -34,7 +34,7 @@ on:
       - 'TestProjects/MissionControlTests/Assets/Tests/ObjectReferenceEqualityComparer.cs'
 
 env:
-  projectpath: 'MissionControl-v2/MissionControl.sln'
+  projectpath: 'MissionControlSystem/MissionControl.sln'
 
 jobs:
   test:
