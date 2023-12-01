@@ -67,4 +67,4 @@ See also [Sample Projects](source/com.unity.cluster-display/Documentation~/sampl
 
 | App source folder | Description |
 |:---|:---|
-| [Cluster Display Mission Control](MissionControl-v2) | Manage multiple computers working together to form a Cluster Display and load, start and stop executables built with Unity for display on the clustered screens. |
+| [Cluster Display Mission Control](MissionControlSystem) | Manage multiple computers working together to form a Cluster Display and load, start and stop executables built with Unity for display on the clustered screens. |
