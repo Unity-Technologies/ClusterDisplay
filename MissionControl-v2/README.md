@@ -1,6 +1,6 @@
 # Cluster Display Mission Control
 
-Use Cluster Display Mission Control to:
+Use the Cluster Display Mission Control system to:
 * Manage multiple computers working together to form a Cluster Display.
 * Load, start and stop executables built with Unity for display on the clustered screens.
 
