@@ -30,11 +30,20 @@ In that case, we recommend that you fork the repository. This will allow you to 
 
 ### Access the Cluster Display package folders
 
+Use these Unity packages to develop and enable the Cluster Display functionality in the Editor.
+
 | Package | Description |
 |:---|:---|
 | **[com.unity.cluster-display](source/com.unity.cluster-display)** | The main required package which implements the core Cluster Display functionality. |
 | **[com.unity.cluster-display.graphics](source/com.unity.cluster-display.graphics)** | Toolkit package providing rendering features for Cluster Display, such as non-standard projections and overscan. |
 | **[com.unity.cluster-display.rpc](source/com.unity.cluster-display.rpc)** | Package required for Remote Procedural Call (RPC) support to make builds that run on multiple machines and simulate the same scene in-sync with each other. |
+
+This repository also includes code and tools to build plugins used in the packages above.
+
+| Plugin | Description |
+|:---|:---|
+| [Quadro Sync plugin](GfxPluginQuadroSync) | Code and script to develop, build and install the plugin to support Nvdia Quadro Sync features in Cluster display package (`com.unity.cluster-display`). |
+| [RPC Source Generators](SourceGenerators) | Tools to develop, build, and deploy the source generators for the Cluster Display Remote Procedural Call (RPC) package (`com.unity.cluster-display.rpc`). |
 
 ### Try out the Cluster Display features
 
@@ -63,8 +72,8 @@ Use these Unity projects to run various tests against the Cluster Display packag
 
 See also [Sample Projects](source/com.unity.cluster-display/Documentation~/sample-projects.md) page for more details.
 
-## Cluster Display Mission Control app
+## Cluster Display Mission Control system
 
-| App source folder | Description |
+| Source folder | Description |
 |:---|:---|
 | [Cluster Display Mission Control](MissionControlSystem) | Manage multiple computers working together to form a Cluster Display and load, start and stop executables built with Unity for display on the clustered screens. |
