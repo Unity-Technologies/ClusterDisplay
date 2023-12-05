@@ -23,11 +23,11 @@ bee.exe
 !MissionControl/**/*.sln
 !MissionControl/**/*.csproj
 
-# MissionControl-v2 specific to ignore
-!MissionControl-v2/**/*.sln
-!MissionControl-v2/**/*.csproj
-MissionControl-v2/Playground/*
-MissionControl-v2/**/*.pubxml.user
+# MissionControl System specific to ignore
+!MissionControlSystem/**/*.sln
+!MissionControlSystem/**/*.csproj
+MissionControlSystem/Playground/*
+MissionControlSystem/**/*.pubxml.user
 
 # Our graphics tests generate reference images on the fly.
 TestProjects/GraphicsTestsURP/Assets/ActualImages
