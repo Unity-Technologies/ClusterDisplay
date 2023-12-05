@@ -67,7 +67,6 @@ Use these Unity projects to run various tests against the Cluster Display packag
 | **[GraphicsTestsURP](TestProjects/GraphicsTestsURP)** | Unity project to test Cluster Display with graphics in URP. |
 | **[LiveEditingTests](TestProjects/LiveEditingTests)** | Unity project to test Cluster Display and live editing. |
 | **[MissionControlTests](TestProjects/MissionControlTests)** | Unity project to test Cluster Display with Mission Control. |
-| **[QuadroSyncTest](TestProjects/QuadroSyncTest)** | Unity project to test Cluster Display with a QuadroSync board. |
 | **[RPCTests](TestProjects/RPCTests)** | Unity project to perform remote procedure call (RPC) tests with Cluster Display. |
 
 See also [Sample Projects](source/com.unity.cluster-display/Documentation~/sample-projects.md) page for more details.
