@@ -1,6 +1,6 @@
 # Cluster Display for Unity Editor
 
-Use the Unity Cluster Display packages (`com.unity.cluster-display`) to display synchronously the same Unity Scene across multiple machines through display clustering.
+Use the Unity Cluster Display package (`com.unity.cluster-display`) to display synchronously the same Unity Scene across multiple machines through display clustering.
 
 This repository contains all packages, resources and sample projects related with Unity Cluster Display.
 
@@ -19,7 +19,7 @@ The Cluster Display package is licensed under the [Apache License, Version 2.0](
 
 ### Contribution and maintenance
 
-We appreciate your interest in contributing to the Unity OSC Protocol Support package.  
+We appreciate your interest in contributing to the Unity Cluster Display package.  
 It's important to note that **this package is provided as is, without any maintenance or release plan.**  
 Therefore, we are unable to monitor bug reports, accept feature requests, or review pull requests for this package.
 
