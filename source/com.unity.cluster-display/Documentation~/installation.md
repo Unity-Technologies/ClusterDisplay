@@ -9,6 +9,9 @@ To install it, you have two main options:
 * Get a local copy of the package (i.e. the folder that includes the ­­`package.json` file) and follow the instructions for [local package installation](https://docs.unity3d.com/Manual/upm-ui-local.html), OR
 
 * Install the package directly from its GitHub repository [using a Git URL](https://docs.unity3d.com/Manual/upm-ui-giturl.html).
+   > [!NOTE]
+   > Cluster Display packages are not located at the root of the repository so the Git URL needs to contain the path to the package folder.
+   > For Example, for `com.unity.cluster-display`package, the correct Git URL is `https://github.com/Unity-Technologies/ClusterDisplay.git?path=/source/com.unity.cluster-display`.
 
 ## Software requirements
 
